@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة الإدارة — الحضور</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF2F1;--surface:#fff;--ink:#1C2B33;--muted:#5E6F77;--line:#D3DCDA;--brand:#155E57;--brand-soft:#DCEBE8;--ok:#1E8E4E;--bad:#B03A2E;--warn:#A86A00;--r:10px;--rs:6px;font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.hidden{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header.top{background:var(--brand);color:#fff}
+header.top .wrap{display:flex;align-items:center;gap:12px;min-height:56px;flex-wrap:wrap}
+header.top h1{font-size:1.1rem;margin:0}
+header.top .who{margin-inline-start:auto;display:flex;gap:10px;align-items:center;font-size:.9rem}
+.btn{border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:var(--rs);padding:8px 16px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--brand)}
+.btn.light{background:transparent;border-color:rgba(255,255,255,.55);color:#fff;padding:4px 12px}
+.btn.danger{background:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:3px 10px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{border:1px solid var(--line);border-radius:var(--rs);padding:9px 11px;background:#fff;min-width:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--muted)}
+main{padding:18px 0 48px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:1rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.login{max-width:380px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.login h2{margin:0 0 14px;font-size:1.2rem}
+.login label{display:block;margin-bottom:12px;font-size:.9rem;color:var(--muted)}
+.login input{width:100%;margin-top:4px}
+.err{color:var(--bad);font-size:.9rem;min-height:1.2em;margin:6px 0}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:start;vertical-align:top}
+th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
+.tablewrap{overflow:auto;max-height:68vh;border:1px solid var(--line);border-radius:var(--rs);background:#fff}
+.tag{display:inline-block;border-radius:99px;padding:1px 10px;font-size:.8rem;background:var(--brand-soft);color:var(--brand)}
+.tag.bad{background:#F8E1DE;color:var(--bad)}.tag.ok{background:#E1F2E8;color:var(--ok)}.tag.warn{background:#FBEFD6;color:var(--warn)}
+.muted{color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 16px;cursor:pointer}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.toast{position:fixed;bottom:18px;inset-inline:0;margin:auto;width:max-content;max-width:90vw;background:#1C2B33;color:#fff;padding:10px 18px;border-radius:8px;z-index:50}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div id="login"></div>
+<div id="app" class="hidden">
+<header class="top"><div class="wrap"><h1>لوحة الإدارة — الحضور والانصراف</h1><div class="who" id="who"></div></div></header>
+<main><div class="wrap">
+<div class="tabs" id="tabs"><button data-t="gate" class="on">تقرير الدخول</button><button data-t="ses">حضور المحاضرات</button><button data-t="dev">الأجهزة <span id="devn"></span></button><button data-t="stu">الطلبة</button><button data-t="staff">الموظفين</button></div>
+
+<section id="t-gate"><div class="panel"><div class="row">
+  <label class="f">من يوم<input type="date" id="g1"></label><label class="f">إلى يوم<input type="date" id="g2"></label>
+  <label class="f" style="flex:1 1 200px">بحث<input id="gq" placeholder="اسم أو كود"></label>
+  <button class="btn" id="gGo">عرض</button><button class="btn ghost" id="gX">تصدير Excel</button><button class="btn ghost" id="gAbs">اللي ما دخلوش (اليوم الأول)</button></div>
+  <div class="muted" id="gSum" style="margin-top:8px"></div></div>
+  <div class="tablewrap"><table><thead id="gH"></thead><tbody id="gB"></tbody></table></div></section>
+
+<section id="t-ses" class="hidden"><div class="panel"><div class="row">
+  <label class="f">من يوم<input type="date" id="s1"></label><label class="f">إلى يوم<input type="date" id="s2"></label><button class="btn" id="sGo">عرض</button></div></div>
+  <div class="tablewrap"><table><thead><tr><th>التاريخ</th><th>الدكتور</th><th>المادة</th><th>الفرقة / الشعبة</th><th>القاعة</th><th>حضر</th><th>من</th><th></th></tr></thead><tbody id="sB"></tbody></table></div></section>
+
+<section id="t-dev" class="hidden"><div class="panel"><h3>طلبات اعتماد جهاز جديد</h3><div id="dB" class="muted">…</div></div>
+  <div class="panel"><h3>فك ربط جهاز طالب (ضاع موبايله)</h3><div class="row"><label class="f" style="flex:1 1 240px">كود الطالب<input id="rc" inputmode="numeric"></label><button class="btn" id="rGo">فك الربط</button></div><div class="muted">بعد الفك الطالب بيربط موبايله الجديد بنفسه بمسح كارنيهه.</div></div></section>
+
+<section id="t-stu" class="hidden"><div class="panel"><div class="row"><label class="f" style="flex:1 1 260px">بحث بالاسم أو الكود<input id="stq"></label><button class="btn" id="stGo">بحث</button><span class="muted" id="stN"></span></div></div>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
+
+<section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
+  <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
+  <div class="tablewrap"><table><thead><tr><th>الاسم</th><th>البريد</th><th>الصلاحية</th></tr></thead><tbody id="stfB"></tbody></table></div></section>
+</div></main></div>
+<script>
+window.CFG = {
+  SUPABASE_URL: 'https://rvuhunrnnsaswjpgfxdi.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_mn0bgauaXwKS8Am00Yu9Ww_ugzf6_ge',
+  JADWAL_URL: 'https://yojdekykcumpslarkfaf.supabase.co',
+  JADWAL_KEY: 'sb_publishable_LsYAEhQ7GSQ8iODLKNmWKQ_agv5Vnv1'
+};
+
+</script>
+<script>
+const $ = (id) => document.getElementById(id);
+const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+const toLatin = (s) => String(s || '').replace(/[٠-٩]/g, (d) => AR_DIGITS.indexOf(d)).replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtTime = (t) => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' });
+const fmtDate = (t) => new Date(t).toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Africa/Cairo' });
+const todayCairo = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
+const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث' };
+function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2800); }
+function exportXlsx(rows, headers, sheet, filename) {
+  const data = [headers].concat(rows);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = headers.map((h, i) => ({ wch: Math.min(40, Math.max(String(h).length + 2, ...rows.map((r) => String(r[i] == null ? '' : r[i]).length + 2))) }));
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 30)); XLSX.writeFile(wb, filename);
+}
+/* تسجيل دخول الموظفين: Auth.init({roles:['admin'], title:'..', onReady(role, profile)}) */
+const Auth = {
+  async init(opt) {
+    const root = $('login');
+    const show = (msg) => {
+      root.classList.remove('hidden'); $('app').classList.add('hidden');
+      root.innerHTML = `<form class="login" id="lf"><h2>${esc(opt.title)}</h2><label>البريد الإلكتروني<input type="email" id="em" required autocomplete="username"></label><label>كلمة المرور<input type="password" id="pw" required autocomplete="current-password"></label><div class="err" id="le">${esc(msg || '')}</div><button class="btn" style="width:100%">دخول</button></form>`;
+      $('lf').onsubmit = async (e) => {
+        e.preventDefault(); $('le').textContent = '';
+        const { error } = await sb.auth.signInWithPassword({ email: $('em').value.trim(), password: $('pw').value });
+        if (error) { $('le').textContent = 'البريد أو كلمة المرور غير صحيحة'; return; }
+        go();
+      };
+    };
+    const go = async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return show();
+      const { data: role, error } = await sb.rpc('my_role');
+      if (error) return show('تعذر التحقق من الصلاحية');
+      if (!opt.roles.includes(role)) {
+        await sb.auth.signOut();
+        return show(role === 'none' || !role ? 'حسابك لسه ملوش صلاحية. كلّم الإدارة.' : 'الحساب ده مالوش صلاحية على الصفحة دي.');
+      }
+      root.classList.add('hidden'); $('app').classList.remove('hidden');
+      const u = session.user; const name = (u.user_metadata && (u.user_metadata.display_name || u.user_metadata.full_name)) || u.email;
+      if ($('who')) $('who').innerHTML = `<span>${esc(name)}</span><button class="btn light" id="lo">خروج</button>`;
+      if ($('lo')) $('lo').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      opt.onReady(role, session.user);
+    };
+    go();
+  }
+};
+
+</script>
+<script>
+const ROLE = { admin: 'إدارة', doctor: 'دكتور', security: 'أمن', none: 'بدون صلاحية' };
+const KIND = { card: 'كارنيه', nid: 'رقم قومي', visitor: 'زائر' };
+const grp = (l, t) => [l ? (LEVEL_NAME[l] || ('مستوى ' + l)) : '', t || ''].filter(Boolean).join(' — ');
+let gRows = [];
+function tab(t) { document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t)); ['gate', 'ses', 'dev', 'stu', 'staff'].forEach((x) => $('t-' + x).classList.toggle('hidden', x !== t)); if (t === 'dev') loadDev(); if (t === 'staff') loadStaff(); if (t === 'stu' && !$('stB').children.length) loadStu(); }
+$('tabs').onclick = (e) => { if (e.target.dataset.t) tab(e.target.dataset.t); };
+async function loadGate() {
+  $('gH').innerHTML = '<tr><th>#</th><th>الوقت</th><th>الاسم</th><th>الكود</th><th>الفرقة / الشعبة</th><th>طريقة الدخول</th><th>ملاحظات</th><th>الأمن</th></tr>';
+  const { data, error } = await sb.rpc('report_gate', { p_from: $('g1').value, p_to: $('g2').value });
+  if (error) return toast('حصل خطأ: ' + error.message); gRows = data || []; drawGate();
+}
+function drawGate() {
+  const q = toLatin($('gq').value).trim(); const R = gRows.filter((r) => !q || (r.name || '').includes(q) || (r.code || '').includes(q));
+  const days = {}; R.forEach((r) => { const d = fmtDate(r.at); days[d] = (days[d] || 0) + 1; });
+  const stu = R.filter((r) => r.kind !== 'visitor').length, vis = R.length - stu;
+  $('gSum').textContent = 'إجمالي: ' + R.length + ' (طلبة ' + stu + ' · زوار ' + vis + ')' + (Object.keys(days).length > 1 ? ' — ' + Object.entries(days).map(([d, n]) => d + ': ' + n).join(' | ') : '');
+  $('gB').innerHTML = R.map((r, i) => `<tr><td>${i + 1}</td><td>${fmtDate(r.at)} ${fmtTime(r.at)}</td><td>${esc(r.name)}</td><td>${esc(r.code || '')}</td><td>${esc(grp(r.level, r.track))}</td><td><span class="tag ${r.kind === 'visitor' ? 'warn' : ''}">${KIND[r.kind] || r.kind}</span></td><td>${esc([r.visitor_nid, r.purpose].filter(Boolean).join(' · '))}</td><td>${esc(r.security || '')}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">مفيش دخول في الفترة دي</td></tr>';
+  window.__gR = R;
+}
+$('gGo').onclick = loadGate; $('gq').oninput = drawGate;
+$('gX').onclick = () => { const R = window.__gR || []; exportXlsx(R.map((r, i) => [i + 1, fmtDate(r.at), fmtTime(r.at), r.name, r.code || '', grp(r.level, r.track), KIND[r.kind] || r.kind, r.visitor_nid || '', r.purpose || '', r.security || '']), ['#', 'التاريخ', 'الوقت', 'الاسم', 'الكود', 'الفرقة / الشعبة', 'طريقة الدخول', 'رقم قومي الزائر', 'سبب الزيارة', 'الأمن'], 'دخول', 'تقرير-الدخول-' + $('g1').value + '.xlsx'); };
+$('gAbs').onclick = async () => {
+  const { data, error } = await sb.rpc('report_gate_absent', { p_day: $('g1').value }); if (error) return toast('حصل خطأ');
+  const d = data || []; exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما دخلوش', 'ما-دخلوش-' + $('g1').value + '.xlsx'); toast('عدد اللي ما دخلوش: ' + d.length);
+};
+async function loadSes() {
+  const { data, error } = await sb.rpc('report_sessions', { p_from: $('s1').value, p_to: $('s2').value }); if (error) return toast('حصل خطأ');
+  $('sB').innerHTML = (data || []).map((s) => `<tr><td>${fmtDate(s.started_at)} ${fmtTime(s.started_at)}</td><td>${esc(s.doctor)}</td><td>${esc(s.course)}</td><td>${esc(s.group_title || '')}</td><td>${esc(s.room || '')}</td><td><b>${s.present}</b></td><td>${s.roster}</td><td><button class="btn ghost sm" data-id="${s.id}" data-c="${esc(s.course)}">Excel</button></td></tr>`).join('') || '<tr><td colspan="8" class="muted">مفيش محاضرات في الفترة دي</td></tr>';
+  $('sB').querySelectorAll('button').forEach((b) => b.onclick = async () => { const { data: r } = await sb.rpc('session_roster', { p_session: b.dataset.id }); exportXlsx((r || []).map((x, i) => [i + 1, x.code, x.name, x.present ? 'حضر' : 'غائب', x.at ? fmtTime(x.at) : '', x.off_roster ? 'خارج الشعبة' : '']), ['#', 'كود الطالب', 'الاسم', 'الحالة', 'وقت الحضور', 'ملاحظة'], 'الحضور', 'حضور-' + b.dataset.c.slice(0, 30) + '.xlsx'); });
+}
+$('sGo').onclick = loadSes;
+async function loadDev() {
+  const { data } = await sb.rpc('pending_devices'); const d = data || []; $('devn').textContent = d.length ? '(' + d.length + ')' : '';
+  $('dB').innerHTML = d.length ? d.map((x) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b>${esc(x.name)}</b> <span class="muted">${esc(x.code)} · ${fmtDate(x.pending_at)} ${fmtTime(x.pending_at)}</span></div><div class="row"><button class="btn sm" data-id="${x.student_id}" data-a="1">اعتماد</button><button class="btn danger sm" data-id="${x.student_id}" data-a="0">رفض</button></div></div>`).join('') : 'مفيش طلبات';
+  $('dB').querySelectorAll('button').forEach((b) => b.onclick = async () => { await sb.rpc('approve_device', { p_student: +b.dataset.id, p_approve: b.dataset.a === '1' }); toast('تم'); loadDev(); });
+}
+$('rGo').onclick = async () => {
+  const c = toLatin($('rc').value).trim(); const { data } = await sb.from('students').select('id,name').eq('code', c).maybeSingle();
+  if (!data) return toast('الكود مش موجود'); if (!confirm('فك ربط جهاز: ' + data.name + '؟')) return;
+  await sb.rpc('reset_device', { p_student: data.id }); toast('تم فك الربط'); $('rc').value = '';
+};
+async function loadStu() {
+  const q = toLatin($('stq').value).trim(); let r = sb.from('students').select('id,code,name,level,track,status,active').order('name').limit(300);
+  if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
+  const { data } = await r; const d = data || []; $('stN').textContent = d.length + (d.length === 300 ? '+' : '') + ' طالب';
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').querySelectorAll('button').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
+}
+$('stGo').onclick = loadStu; $('stq').onkeydown = (e) => { if (e.key === 'Enter') loadStu(); };
+async function loadStaff() { const { data } = await sb.rpc('list_staff'); $('stfB').innerHTML = (data || []).map((p) => `<tr><td>${esc(p.full_name)}</td><td dir="ltr" style="text-align:right">${esc(p.email)}</td><td><span class="tag ${p.role === 'none' ? 'bad' : ''}">${ROLE[p.role]}</span></td></tr>`).join(''); }
+$('sGo2').onclick = async () => { const e = $('se').value.trim(); if (!e) return; await sb.rpc('set_staff_role', { p_email: e, p_role: $('sr').value }); toast('تم'); loadStaff(); };
+Auth.init({ roles: ['admin'], title: 'لوحة الإدارة', onReady: () => { const t = todayCairo(); ['g1', 'g2', 's1', 's2'].forEach((i) => $(i).value = t); loadGate(); loadSes(); sb.rpc('pending_devices').then(({ data }) => { if (data && data.length) $('devn').textContent = '(' + data.length + ')'; }); } });
+</script>
+</body></html>
