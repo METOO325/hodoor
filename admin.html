@@ -76,7 +76,7 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
   <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
 
 <section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
-  <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
+  <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="accounts">حسابات</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
   <div class="tablewrap"><table><thead><tr><th>الاسم</th><th>البريد</th><th>الصلاحية</th></tr></thead><tbody id="stfB"></tbody></table></div></section>
 </div></main></div>
 <script>
@@ -141,7 +141,7 @@ const Auth = {
 
 </script>
 <script>
-const ROLE = { admin: 'إدارة', doctor: 'دكتور', security: 'أمن', none: 'بدون صلاحية' };
+const ROLE = { accounts: 'حسابات', admin: 'إدارة', doctor: 'دكتور', security: 'أمن', none: 'بدون صلاحية' };
 const KIND = { card: 'كارنيه', nid: 'رقم قومي', visitor: 'زائر' };
 const grp = (l, t) => [l ? (LEVEL_NAME[l] || ('مستوى ' + l)) : '', t || ''].filter(Boolean).join(' — ');
 let gRows = [];
