@@ -72,9 +72,10 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 <main><div class="wrap">
   <div id="pick">
     <div id="resume"></div>
-    <div class="panel"><h3>اختار محاضرتك النهارده</h3>
-      <div class="row" style="margin-bottom:10px"><label class="f" style="flex:1 1 220px">دوّر باسم الدكتور أو المادة<input id="q" placeholder="اكتب جزء من الاسم"></label></div>
-      <div id="lecs" class="muted">بحمّل جدول النهارده…</div></div>
+    <div class="panel"><h3>اختار محاضرتك (جدول الأسبوع)</h3>
+      <div class="tabs" id="wdays"></div>
+      <div class="row" style="margin-bottom:10px"><label class="f" style="flex:1 1 220px">دوّر باسم الدكتور أو المادة (بيدوّر في الأسبوع كله)<input id="q" placeholder="اكتب جزء من الاسم"></label></div>
+      <div id="lecs" class="muted">بحمّل جدول الأسبوع…</div></div>
     <details class="panel"><summary style="cursor:pointer;font-weight:600">محاضرة مش في الجدول (إدخال يدوي)</summary>
       <div class="row" style="margin-top:10px">
         <label class="f" style="flex:1 1 220px">المادة<input id="mc"></label>
@@ -167,27 +168,44 @@ function groupInfo(s) {
   let tk = 'any'; if (/إرشاد|ارشاد/.test(t)) tk = 'guide'; else if (/ضيافة/.test(t)) tk = 'hosp'; else if (/دراسات سياحية/.test(t)) tk = 'tour';
   return { level, tk, label: [s.title, s.track].filter(Boolean).join(' — ') };
 }
+const DNAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const addD = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 async function loadToday() {
-  const day = new Date(todayCairo() + 'T12:00').getDay(), today = todayCairo();
+  const today = todayCairo(), dow = new Date(today + 'T12:00').getDay();
+  const sat = addD(today, -((dow + 1) % 7)), dates = [0, 1, 2, 3, 4, 5, 6].map((n) => addD(sat, n));
   const [{ data: sch, error: e1 }, { data: items, error: e2 }, { data: ch }] = await Promise.all([
-    jd.from('schedules').select('*').order('sort'), jd.from('schedule_items').select('*').eq('day', day).order('start_time'),
-    jd.from('schedule_changes').select('*').eq('on_date', today)]);
-  window.__diag = (e1 || e2) ? 'خطأ في قراءة الجدول: ' + ((e1 || e2).message || '') : `اليوم ${['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][day]} ${today} — في الجدول ${(items || []).length} محاضرة لليوم ده من ${(sch || []).length} جدول`;
-  const S = {}; (sch || []).forEach((s) => S[s.id] = s);
-  const chBy = {}; (ch || []).forEach((c) => { if (c.item_id) chBy[c.item_id] = c; });
-  let list = [];
-  (items || []).forEach((it) => { const c = chBy[it.id]; if (c && c.cancelled) return; const o = Object.assign({}, it); if (c) ['subject', 'lecturer', 'room', 'start_time', 'end_time'].forEach((k) => { if (c[k]) o[k] = c[k]; }); list.push(o); });
-  (ch || []).filter((c) => !c.item_id && !c.cancelled).forEach((c) => list.push({ schedule_id: c.schedule_id, subject: c.subject, lecturer: c.lecturer, room: c.room, start_time: c.start_time, end_time: c.end_time }));
-  list.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
-  window.__lecs = list.map((it) => ({ it, s: S[it.schedule_id] })).filter((x) => x.s);
+    jd.from('schedules').select('*').order('sort'), jd.from('schedule_items').select('*').order('start_time'),
+    jd.from('schedule_changes').select('*').gte('on_date', dates[0]).lte('on_date', dates[6])]);
+  window.__diag = (e1 || e2) ? 'خطأ في قراءة الجدول: ' + ((e1 || e2).message || '') : `في الجدول ${(items || []).length} محاضرة أسبوعية من ${(sch || []).length} جدول`;
+  const S = {}; (sch || []).forEach((x) => S[x.id] = x);
+  const chBy = {}; (ch || []).forEach((c) => { if (c.item_id) chBy[c.item_id + '|' + c.on_date] = c; });
+  const week = {};
+  dates.forEach((dt) => {
+    const d = new Date(dt + 'T12:00').getDay(); let list = [];
+    (items || []).filter((it) => it.day === d).forEach((it) => { const c = chBy[it.id + '|' + dt]; if (c && c.cancelled) return; const o = Object.assign({}, it); if (c) ['subject', 'lecturer', 'room', 'start_time', 'end_time'].forEach((k) => { if (c[k]) o[k] = c[k]; }); list.push(o); });
+    (ch || []).filter((c) => c.on_date === dt && !c.item_id && !c.cancelled).forEach((c) => list.push({ schedule_id: c.schedule_id, subject: c.subject, lecturer: c.lecturer, room: c.room, start_time: c.start_time, end_time: c.end_time }));
+    list.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+    week[dt] = list.map((it) => ({ it, s: S[it.schedule_id], date: dt })).filter((x) => x.s);
+  });
+  window.__week = week; window.__dates = dates; window.__today = today; window.__sel = today;
   window.__sch = sch || [];
-  renderLecs(); const sel = $('mg'); sel.innerHTML = window.__sch.map((s, i) => `<option value="${i}">${esc(groupInfo(s).label)}</option>`).join('');
+  renderDays(); renderLecs(); const sel = $('mg'); sel.innerHTML = window.__sch.map((x, i) => `<option value="${i}">${esc(groupInfo(x).label)}</option>`).join('');
+}
+function renderDays() {
+  const W = window.__week || {};
+  $('wdays').innerHTML = (window.__dates || []).filter((dt) => (W[dt] || []).length || dt === window.__today).map((dt) => {
+    const d = new Date(dt + 'T12:00'); const on = dt === window.__sel;
+    return `<button class="${on ? 'on' : ''}" data-d="${dt}">${dt === window.__today ? 'النهارده' : DNAMES[d.getDay()]} <small>${d.getDate()}/${d.getMonth() + 1}</small></button>`;
+  }).join('');
+  $('wdays').querySelectorAll('button').forEach((b) => b.onclick = () => { window.__sel = b.dataset.d; renderDays(); renderLecs(); });
 }
 function renderLecs() {
-  const q = toLatin($('q').value).trim();
-  const L = (window.__lecs || []).filter((x) => !q || (x.it.lecturer || '').includes(q) || (x.it.subject || '').includes(q));
-  $('lecs').innerHTML = L.length ? L.map((x, i) => { const g = groupInfo(x.s); return `<div class="lec"><div><b>${esc(x.it.subject)}</b><div class="m">${esc(x.it.lecturer || '')} · ${esc(x.it.room || '')} · ${esc(g.label)}</div><div class="m">${String(x.it.start_time).slice(0, 5)} – ${String(x.it.end_time).slice(0, 5)}</div></div><button class="btn" data-i="${window.__lecs.indexOf(x)}">ابدأ</button></div>`; }).join('') : '<div class="muted">مفيش محاضرات مطابقة النهارده. استخدم الإدخال اليدوي تحت.<br><small>' + esc((q ? 'البحث شغّال بـ "' + q + '" — امسحه. ' : '') + (window.__diag || '')) + '</small></div>';
-  $('lecs').querySelectorAll('button').forEach((b) => b.onclick = () => { const x = window.__lecs[+b.dataset.i]; const g = groupInfo(x.s); start(x.it.subject + (x.it.lecturer ? ' — ' + x.it.lecturer : ''), g.label, g.level, g.tk, x.it.room); });
+  const q = toLatin($('q').value).trim(), W = window.__week || {};
+  const pool = q ? (window.__dates || []).flatMap((dt) => W[dt] || []) : (W[window.__sel] || []);
+  const L = pool.filter((x) => !q || (x.it.lecturer || '').includes(q) || (x.it.subject || '').includes(q));
+  window.__shown = L;
+  $('lecs').innerHTML = L.length ? L.map((x, i) => { const g = groupInfo(x.s); const dd = new Date(x.date + 'T12:00'); return `<div class="lec"><div><b>${esc(x.it.subject)}</b><div class="m">${esc(x.it.lecturer || '')} · ${esc(x.it.room || '')} · ${esc(g.label)}</div><div class="m">${q || x.date !== window.__today ? (x.date === window.__today ? 'النهارده' : DNAMES[dd.getDay()] + ' ' + dd.getDate() + '/' + (dd.getMonth() + 1)) + ' · ' : ''}${String(x.it.start_time).slice(0, 5)} – ${String(x.it.end_time).slice(0, 5)}</div></div><button class="btn ${x.date === window.__today ? '' : 'ghost'}" data-i="${i}">ابدأ</button></div>`; }).join('') : '<div class="muted">مفيش محاضرات في اليوم ده' + (q ? ' بالبحث ده' : '') + '. جرّب يوم تاني أو الإدخال اليدوي تحت.<br><small>' + esc((q ? 'البحث شغّال بـ "' + q + '" على الأسبوع كله — امسحه. ' : '') + (window.__diag || '')) + '</small></div>';
+  $('lecs').querySelectorAll('button').forEach((b) => b.onclick = () => { const x = window.__shown[+b.dataset.i]; if (x.date !== window.__today && !confirm('المحاضرة دي مش النهارده (' + x.date + '). تبدأها دلوقتي برضه؟')) return; const g = groupInfo(x.s); start(x.it.subject + (x.it.lecturer ? ' — ' + x.it.lecturer : ''), g.label, g.level, g.tk, x.it.room); });
 }
 $('q').oninput = renderLecs;
 $('mgo').onclick = () => { const c = $('mc').value.trim(); if (!c) return toast('اكتب اسم المادة'); const s = window.__sch[+$('mg').value]; const g = groupInfo(s); start(c, g.label, g.level, g.tk, $('mr').value); };
