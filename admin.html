@@ -185,9 +185,9 @@ $('rGo').onclick = async () => {
 async function loadStu() {
   const q = toLatin($('stq').value).trim(); let d = [], from = 0;
   for (;;) {
-    let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').range(from, from + 999);
+    let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').range(from, from + 199);
     if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
-    const { data } = await r; d = d.concat(data || []); if (!data || data.length < 1000) break; from += 1000;
+    const { data } = await r; if (!data || !data.length) break; d = d.concat(data); from += data.length;
   }
   $('stN').textContent = d.length + ' طالب';
   $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">متبقي</span>' : '<span class="muted">—</span>')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
@@ -201,7 +201,7 @@ async function loadSum() {
 }
 async function allStu(filter) {
   let out = [], from = 0;
-  for (;;) { const { data } = await filter(sb.from('students').select('code,name,level,track,card_received_at,fees_status').eq('active', true).order('name').range(from, from + 999)); out = out.concat(data || []); if (!data || data.length < 1000) break; from += 1000; }
+  for (;;) { const { data } = await filter(sb.from('students').select('code,name,level,track,card_received_at,fees_status').eq('active', true).order('name').range(from, from + 199)); if (!data || !data.length) break; out = out.concat(data); from += data.length; }
   return out;
 }
 $('cX').onclick = async () => { const d = await allStu((q) => q.is('card_received_at', null)); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما استلموش', 'ما-استلموش-الكارنيه.xlsx'); toast('العدد: ' + d.length); };

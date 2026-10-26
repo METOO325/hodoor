@@ -130,7 +130,7 @@ const norm = (n) => String(n || '').replace(/[ً-ْـ]/g, '').replace(/\s+/g, ''
 const grp = (l) => LEVEL_NAME[l] || ('مستوى ' + l);
 async function load() {
   let out = [], off = 0;
-  for (;;) { const { data, error } = await sb.rpc('fees_list', { p_offset: off, p_limit: 1000 }); if (error) { toast('حصل خطأ: ' + error.message); break; } out = out.concat(data || []); if (!data || data.length < 1000) break; off += 1000; }
+  for (;;) { const { data, error } = await sb.rpc('fees_list', { p_offset: off, p_limit: 200 }); if (error) { toast('حصل خطأ: ' + error.message); break; } if (!data || !data.length) break; out = out.concat(data); off += data.length; }
   ALL = out; draw();
 }
 function draw() {
