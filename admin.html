@@ -183,9 +183,13 @@ $('rGo').onclick = async () => {
   await sb.rpc('reset_device', { p_student: data.id }); toast('تم فك الربط'); $('rc').value = '';
 };
 async function loadStu() {
-  const q = toLatin($('stq').value).trim(); let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').limit(300);
-  if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
-  const { data } = await r; const d = data || []; $('stN').textContent = d.length + (d.length === 300 ? '+' : '') + ' طالب';
+  const q = toLatin($('stq').value).trim(); let d = [], from = 0;
+  for (;;) {
+    let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').range(from, from + 999);
+    if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
+    const { data } = await r; d = d.concat(data || []); if (!data || data.length < 1000) break; from += 1000;
+  }
+  $('stN').textContent = d.length + ' طالب';
   $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">متبقي</span>' : '<span class="muted">—</span>')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
   $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => { await sb.rpc('set_card_received', { p_student: +b.dataset.c, p_received: b.dataset.r !== '1' }); loadStu(); loadSum(); });
