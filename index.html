@@ -221,8 +221,16 @@ function setup(msg) {
 function home() {
   const token = LS.get('hd_token'); if (!token) return setup();
   if (pendingX) { const x = pendingX; pendingX = null; history.replaceState(null, '', location.pathname); return submit(x); }
-  view(`<div class="card"><div style="font-size:3rem">👋</div><h2 style="margin:6px 0">${esc(LS.get('hd_name') || '')}</h2><p class="muted">لتسجيل الحضور: وجّه الكاميرا على الباركود اللي على شاشة الدكتور.</p></div><button class="btn big" id="scan">مسح باركود المحاضرة</button><button class="btn ghost big" id="unbind">ده مش حسابي / تغيير الكارنيه</button>`);
+  view(`<div class="card"><div style="font-size:3rem">👋</div><h2 style="margin:6px 0">${esc(LS.get('hd_name') || '')}</h2><div id="info"></div><p class="muted">لتسجيل الحضور: وجّه الكاميرا على الباركود اللي على شاشة الدكتور.</p></div><button class="btn big" id="scan">مسح باركود المحاضرة</button><button class="btn ghost big" id="unbind">ده مش حسابي / تغيير الكارنيه</button>`);
   $('scan').onclick = scanLecture;
+  sb.rpc('my_status', { p_token: token, p_key: devKey() }).then(({ data }) => {
+    if (!data || !data.ok || !$('info')) return;
+    const g = [data.level ? (LEVEL_NAME[data.level] || '') : '', data.track || ''].filter(Boolean).join(' — ');
+    let h = g ? `<p class="muted" style="margin:0 0 10px">${esc(g)}</p>` : '';
+    if (data.fees === 'paid') h += '<div class="res ok" style="padding:12px;margin-bottom:10px"><b>✓ تم دفع الرسوم</b></div>';
+    else if (data.fees === 'unpaid') h += '<div class="res warn" style="padding:12px;margin-bottom:10px"><b>في رسوم متبقية</b><div class="sub" style="font-size:.9rem">راجع شئون الطلبة / الحسابات</div></div>';
+    $('info').innerHTML = h;
+  });
   $('unbind').onclick = () => { if (confirm('هتمسح ربط الكارنيه من الجهاز ده. متأكد؟')) { LS.set('hd_token', ''); LS.set('hd_name', ''); home(); } };
 }
 function scanLecture() {

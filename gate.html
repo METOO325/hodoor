@@ -76,6 +76,7 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 <main><div class="wrap" style="max-width:760px">
   <div class="cam"><video id="v" muted></video><div class="frame"></div></div>
   <div class="err" id="camerr"></div>
+  <div class="muted" style="text-align:center;margin:6px 0">لو معاك ماكينة باركود USB: وصّلها وامسح الكارنيه مباشرة، من غير ما تضغط على أي حاجة.</div>
   <div class="actions">
     <button class="btn ghost" id="bFlip">قلب الكاميرا</button>
     <button class="btn" id="bNid">نسي الكارنيه (رقم قومي)</button>
@@ -235,6 +236,32 @@ $('bVis').onclick = () => modal('<h3>دخول زائر</h3><label>اسم الز�
   $('modal').classList.add('hidden'); handleResult(data); return true;
 });
 $('bFlip').onclick = () => sc.flip();
+
+// ماكينة الباركود (USB): بتكتب الكود وتدوس Enter. بنقرا بـ event.code عشان تشتغل حتى لو الكيبورد عربي
+(function () {
+  let buf = '', last = 0;
+  document.addEventListener('keydown', (e) => {
+    const t = e.target && e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const now = Date.now();
+    if (now - last > 400) buf = '';
+    last = now;
+    if (e.key === 'Enter') {
+      const c = buf; buf = '';
+      if (/^EGT-[A-Z0-9]{8}$/.test(c)) { e.preventDefault(); onCode(c); }
+      return;
+    }
+    let ch = '';
+    if (/^Key[A-Z]$/.test(e.code)) ch = e.code.slice(3);
+    else if (/^Digit\d$/.test(e.code)) ch = e.code.slice(5);
+    else if (/^Numpad\d$/.test(e.code)) ch = e.code.slice(6);
+    else if (e.code === 'Minus' || e.code === 'NumpadSubtract') ch = '-';
+    else if (e.key && e.key.length === 1 && /[A-Za-z0-9-]/.test(e.key)) ch = e.key.toUpperCase();
+    if (ch) buf += ch;
+  });
+})();
+
 Auth.init({ roles: ['security', 'admin'], title: 'بوابة المعهد', onReady: async () => {
   sc = Scanner($('v'), onCode, { onError: () => { $('camerr').textContent = 'مقدرتش أفتح الكاميرا. اسمح للمتصفح باستخدامها وافتح الصفحة من رابط https.'; } });
   sc.start(); loadRecent(); setInterval(loadRecent, 20000);

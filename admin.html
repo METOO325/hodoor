@@ -72,7 +72,8 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
   <div class="panel"><h3>فك ربط جهاز طالب (ضاع موبايله)</h3><div class="row"><label class="f" style="flex:1 1 240px">كود الطالب<input id="rc" inputmode="numeric"></label><button class="btn" id="rGo">فك الربط</button></div><div class="muted">بعد الفك الطالب بيربط موبايله الجديد بنفسه بمسح كارنيهه.</div></div></section>
 
 <section id="t-stu" class="hidden"><div class="panel"><div class="row"><label class="f" style="flex:1 1 260px">بحث بالاسم أو الكود<input id="stq"></label><button class="btn" id="stGo">بحث</button><span class="muted" id="stN"></span></div></div>
-  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
+  <div class="panel"><h3>الكارنيهات والرسوم <span class="muted" id="sum"></span></h3><div class="row"><button class="btn ghost" id="cX">تنزيل اللي ما استلموش الكارنيه</button><button class="btn ghost" id="fX">تنزيل اللي عليهم رسوم</button><label class="btn" style="cursor:pointer">رفع ملف الرسوم (Excel)<input type="file" id="fUp" accept=".xlsx,.xls,.csv" hidden></label></div><div class="muted">ملف الرسوم: عمود "الكود" (أو "الرقم القومي") وعمود "الحالة": مدفوع / تم / سدد = أخضر، وأي حاجة تانية (لسه / غير مدفوع / فاضي) = برتقالي.</div></div>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
 
 <section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
   <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
@@ -144,7 +145,7 @@ const ROLE = { admin: 'إدارة', doctor: 'دكتور', security: 'أمن', no
 const KIND = { card: 'كارنيه', nid: 'رقم قومي', visitor: 'زائر' };
 const grp = (l, t) => [l ? (LEVEL_NAME[l] || ('مستوى ' + l)) : '', t || ''].filter(Boolean).join(' — ');
 let gRows = [];
-function tab(t) { document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t)); ['gate', 'ses', 'dev', 'stu', 'staff'].forEach((x) => $('t-' + x).classList.toggle('hidden', x !== t)); if (t === 'dev') loadDev(); if (t === 'staff') loadStaff(); if (t === 'stu' && !$('stB').children.length) loadStu(); }
+function tab(t) { document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === t)); ['gate', 'ses', 'dev', 'stu', 'staff'].forEach((x) => $('t-' + x).classList.toggle('hidden', x !== t)); if (t === 'dev') loadDev(); if (t === 'staff') loadStaff(); if (t === 'stu') { if (!$('stB').children.length) loadStu(); loadSum(); } }
 $('tabs').onclick = (e) => { if (e.target.dataset.t) tab(e.target.dataset.t); };
 async function loadGate() {
   $('gH').innerHTML = '<tr><th>#</th><th>الوقت</th><th>الاسم</th><th>الكود</th><th>الفرقة / الشعبة</th><th>طريقة الدخول</th><th>ملاحظات</th><th>الأمن</th></tr>';
@@ -182,12 +183,37 @@ $('rGo').onclick = async () => {
   await sb.rpc('reset_device', { p_student: data.id }); toast('تم فك الربط'); $('rc').value = '';
 };
 async function loadStu() {
-  const q = toLatin($('stq').value).trim(); let r = sb.from('students').select('id,code,name,level,track,status,active').order('name').limit(300);
+  const q = toLatin($('stq').value).trim(); let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').limit(300);
   if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
   const { data } = await r; const d = data || []; $('stN').textContent = d.length + (d.length === 300 ? '+' : '') + ' طالب';
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
-  $('stB').querySelectorAll('button').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">متبقي</span>' : '<span class="muted">—</span>')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
+  $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => { await sb.rpc('set_card_received', { p_student: +b.dataset.c, p_received: b.dataset.r !== '1' }); loadStu(); loadSum(); });
 }
+async function loadSum() {
+  const c = (f) => f(sb.from('students').select('id', { count: 'exact', head: true }).eq('active', true));
+  const [t, r, p, u] = await Promise.all([c((q) => q), c((q) => q.not('card_received_at', 'is', null)), c((q) => q.eq('fees_status', 'paid')), c((q) => q.eq('fees_status', 'unpaid'))]);
+  $('sum').textContent = `— الكل ${t.count} • استلموا الكارنيه ${r.count} • رسوم مدفوعة ${p.count} • متبقي ${u.count}`;
+}
+async function allStu(filter) {
+  let out = [], from = 0;
+  for (;;) { const { data } = await filter(sb.from('students').select('code,name,level,track,card_received_at,fees_status').eq('active', true).order('name').range(from, from + 999)); out = out.concat(data || []); if (!data || data.length < 1000) break; from += 1000; }
+  return out;
+}
+$('cX').onclick = async () => { const d = await allStu((q) => q.is('card_received_at', null)); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما استلموش', 'ما-استلموش-الكارنيه.xlsx'); toast('العدد: ' + d.length); };
+$('fX').onclick = async () => { const d = await allStu((q) => q.neq('fees_status', 'paid')); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'unpaid' ? 'متبقي' : 'غير محدد']), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الرسوم'], 'رسوم', 'رسوم-متبقية.xlsx'); toast('العدد: ' + d.length); };
+$('fUp').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = '';
+  const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+  const key = (r, names) => { for (const k of Object.keys(r)) if (names.some((n) => String(k).replace(/\s/g, '').includes(n))) return r[k]; return ''; };
+  const PAID = /^(مدفوع|تم|سدد|سداد|دفع|paid|yes|نعم|1|✔|✓)/i;
+  const items = rows.map((r) => ({ code: toLatin(String(key(r, ['الكود', 'كود']))).replace(/\D/g, ''), nid: toLatin(String(key(r, ['القومي', 'قومى']))).replace(/\D/g, ''), status: PAID.test(String(key(r, ['الحالة', 'السداد', 'الرسوم'])).trim()) ? 'paid' : 'unpaid' })).filter((x) => x.code || x.nid);
+  if (!items.length) return toast('ما لقيتش عمود الكود أو الرقم القومي');
+  if (!confirm('هيتحدّث ' + items.length + ' طالب. تكمل؟')) return;
+  let upd = 0, skp = 0;
+  for (let i = 0; i < items.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: items.slice(i, i + 300) }); if (error) return toast('حصل خطأ: ' + error.message); upd += data.updated; skp += data.skipped; }
+  toast('اتحدّث ' + upd + ' — اتخطّى ' + skp); loadStu(); loadSum();
+};
 $('stGo').onclick = loadStu; $('stq').onkeydown = (e) => { if (e.key === 'Enter') loadStu(); };
 async function loadStaff() { const { data } = await sb.rpc('list_staff'); $('stfB').innerHTML = (data || []).map((p) => `<tr><td>${esc(p.full_name)}</td><td dir="ltr" style="text-align:right">${esc(p.email)}</td><td><span class="tag ${p.role === 'none' ? 'bad' : ''}">${ROLE[p.role]}</span></td></tr>`).join(''); }
 $('sGo2').onclick = async () => { const e = $('se').value.trim(); if (!e) return; await sb.rpc('set_staff_role', { p_email: e, p_role: $('sr').value }); toast('تم'); loadStaff(); };
