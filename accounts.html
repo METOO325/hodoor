@@ -55,11 +55,12 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 <div id="app" class="hidden">
 <header class="top"><div class="wrap"><h1>الحسابات — حالة سداد الرسوم</h1><div class="who" id="who"></div></div></header>
 <main><div class="wrap">
+  <details class="panel" id="lv"><summary style="cursor:pointer;font-weight:600">أسعار الرسوم لكل فرقة (اضغط للتعديل)</summary><div class="row" id="lvRow" style="margin-top:10px"></div></details>
   <div class="panel"><h3>الملخص <span class="muted" id="sum"></span></h3>
-    <div class="row"><label class="btn" style="cursor:pointer">رفع كشف المدفوعين (Excel)<input type="file" id="up" accept=".xlsx,.xls,.csv" hidden></label><button class="btn ghost" id="xUn">تنزيل اللي لسه ما دفعوش</button><button class="btn ghost" id="xPd">تنزيل اللي دفعوا</button></div>
-    <div class="muted" style="margin-top:8px">الكشف: أي ملف فيه أسماء (أو أكواد) الطلاب اللي دفعوا. لو فيه عمود "الحالة" بنقرأه، ولو مفيش بنعتبر كل اللي في الملف دفعوا. الأسماء اللي مش لاقيينها بنعرضها قبل الحفظ.</div></div>
-  <div class="panel"><div class="row"><label class="f" style="flex:1 1 240px">بحث بالاسم أو الكود<input id="q"></label><label class="f">عرض<select id="flt"><option value="">الكل</option><option value="paid">دفعوا</option><option value="unpaid">لسه</option><option value="none">لسه ما اتحددش</option></select></label><span class="muted" id="cnt"></span></div></div>
-  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الرسوم</th></tr></thead><tbody id="tb"></tbody></table></div>
+    <div class="row"><label class="btn" style="cursor:pointer">رفع كشف المدفوعين (Excel)<input type="file" id="up" accept=".xlsx,.xls,.csv" hidden></label><button class="btn ghost" id="xUn">تنزيل اللي عليهم رسوم</button><button class="btn ghost" id="xPd">تنزيل اللي دفعوا</button></div>
+    <div class="muted" style="margin-top:8px">الكشف: أي ملف فيه أسماء (أو أكواد) الطلاب. لو فيه عمود "المبلغ" بنسجّل المبلغ المدفوع، ولو فيه عمود "الحالة" بنقرأه، ولو مفيش الاتنين بنعتبر كل اللي في الملف دفعوا كامل. الأسماء اللي مش لاقيينها بنعرضها قبل الحفظ.</div></div>
+  <div class="panel"><div class="row"><label class="f" style="flex:1 1 240px">بحث بالاسم أو الكود<input id="q"></label><label class="f">الفرقة<select id="fl"><option value="">الكل</option></select></label><label class="f">عرض<select id="flt"><option value="">الكل</option><option value="paid">تم الدفع</option><option value="partial">متبقي جزء</option><option value="unpaid">لم يتم الدفع</option><option value="extra">عليهم رسوم أخرى</option></select></label><span class="muted" id="cnt"></span></div></div>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>المطلوب</th><th>رسوم أخرى</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
 </div></main>
 </div>
 <div id="modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px"></div>
@@ -81,7 +82,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const fmtTime = (t) => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' });
 const fmtDate = (t) => new Date(t).toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Africa/Cairo' });
 const todayCairo = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
-const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث' };
+const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث', 4: 'المستوى الرابع', 5: 'أولى دبلومة', 6: 'ثانية دبلومة' };
+const money = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج';
 function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2800); }
 function exportXlsx(rows, headers, sheet, filename) {
   const data = [headers].concat(rows);
@@ -128,37 +130,72 @@ const Auth = {
 let ALL = [];
 const norm = (n) => String(n || '').replace(/[ً-ْـ]/g, '').replace(/\s+/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ئ/g, 'ي').replace(/ؤ/g, 'و');
 const grp = (l) => LEVEL_NAME[l] || ('مستوى ' + l);
+const num = (v) => { const t = toLatin(String(v == null ? '' : v)).replace(/[,،\s]/g, ''); return t === '' ? null : (/^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN); };
+const rest = (s) => Math.max(0, Number(s.due) - Number(s.paid));
+const ST = { paid: ['تم الدفع', 'ok'], partial: ['متبقي جزء', 'warn'], unpaid: ['لم يتم الدفع', 'bad'] };
+async function loadLevels() {
+  const { data, error } = await sb.rpc('fee_levels_list'); if (error) return;
+  $('lvRow').innerHTML = data.map((l) => `<label class="f">${esc(l.name)}<span style="display:flex;gap:6px"><input data-l="${l.level}" value="${Number(l.amount)}" inputmode="decimal" style="width:110px"><button class="btn sm" data-sv="${l.level}">حفظ</button></span></label>`).join('');
+  $('lvRow').querySelectorAll('button[data-sv]').forEach((b) => b.onclick = async () => {
+    const v = num($('lvRow').querySelector(`input[data-l="${b.dataset.sv}"]`).value);
+    if (v == null || isNaN(v)) return toast('اكتب المبلغ أرقام بس');
+    const { error } = await sb.rpc('set_level_fee', { p_level: +b.dataset.sv, p_amount: v }); if (error) return toast('حصل خطأ: ' + error.message);
+    toast('اتحفظ السعر واتحسبت حالات الطلبة من جديد'); load();
+  });
+  const used = new Set(ALL.map((s) => s.level));
+  $('fl').innerHTML = '<option value="">الكل</option>' + data.filter((l) => used.has(l.level)).map((l) => `<option value="${l.level}">${esc(l.name)}</option>`).join('');
+}
 async function load() {
   let out = [], off = 0;
   for (;;) { const { data, error } = await sb.rpc('fees_list', { p_offset: off, p_limit: 200 }); if (error) { toast('حصل خطأ: ' + error.message); break; } if (!data || !data.length) break; out = out.concat(data); off += data.length; }
-  ALL = out; draw();
+  ALL = out; draw(); if (!$('lvRow').innerHTML) loadLevels();
 }
 function draw() {
-  const c = { paid: 0, unpaid: 0, none: 0 }; ALL.forEach((s) => c[s.fees_status || 'none']++);
-  $('sum').textContent = `— الكل ${ALL.length} • دفعوا ${c.paid} • لسه ${c.unpaid} • لسه ما اتحددش ${c.none}`;
-  const q = toLatin($('q').value).trim(), f = $('flt').value, nq = norm(q);
-  const d = ALL.filter((s) => (!f || (s.fees_status || 'none') === f) && (!q || s.code.startsWith(q) || norm(s.name).includes(nq)));
+  const c = { paid: 0, partial: 0, unpaid: 0 }; let got = 0, left = 0;
+  ALL.forEach((s) => { if (c[s.fees_status] != null) c[s.fees_status]++; got += Number(s.paid); left += rest(s); });
+  $('sum').textContent = `— الكل ${ALL.length} • تم الدفع ${c.paid} • متبقي جزء ${c.partial} • لم يتم الدفع ${c.unpaid} • المحصّل ${money(got)} • المتبقي ${money(left)}`;
+  const q = toLatin($('q').value).trim(), f = $('flt').value, lv = $('fl').value, nq = norm(q);
+  const d = ALL.filter((s) => (!lv || String(s.level) === lv) && (!f || (f === 'extra' ? Number(s.extra) > 0 : s.fees_status === f)) && (!q || s.code.startsWith(q) || norm(s.name).includes(nq)));
   $('cnt').textContent = d.length + ' طالب';
-  $('tb').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(grp(s.level))}</td><td>${esc(s.track)}</td><td><button class="btn sm ${s.fees_status === 'paid' ? '' : 'ghost'}" data-i="${s.id}" data-s="paid">دفع ✓</button> <button class="btn sm ${s.fees_status === 'unpaid' ? 'danger' : 'ghost'}" data-i="${s.id}" data-s="unpaid">لسه</button></td></tr>`).join('');
-  $('tb').querySelectorAll('button').forEach((b) => b.onclick = async () => {
-    const s = ALL.find((x) => x.id === +b.dataset.i); const st = s.fees_status === b.dataset.s ? null : b.dataset.s;
-    const { error } = await sb.rpc('set_fee_one', { p_student: s.id, p_status: st }); if (error) return toast('حصل خطأ'); s.fees_status = st; draw();
-  });
+  $('tb').innerHTML = d.slice(0, 500).map((s) => { const st = ST[s.fees_status] || ['—', '']; return `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(grp(s.level))}</td><td>${money(s.due)}</td><td>${Number(s.extra) > 0 ? money(s.extra) + (s.extra_note ? `<div class="muted" style="font-size:.8rem">${esc(s.extra_note)}</div>` : '') : '<span class="muted">—</span>'}</td><td>${money(s.paid)}</td><td>${rest(s) > 0 ? '<b>' + money(rest(s)) + '</b>' : '<span class="muted">0</span>'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="white-space:nowrap">${s.fees_status !== 'paid' ? `<button class="btn sm" data-full="${s.id}">دفع كامل</button> ` : ''}<button class="btn sm ghost" data-ed="${s.id}">تعديل</button></td></tr>`; }).join('') + (d.length > 500 ? `<tr><td colspan="9" class="muted">بيظهر أول 500 بس — استخدم البحث أو الفلتر</td></tr>` : '');
+  $('tb').querySelectorAll('button[data-full]').forEach((b) => b.onclick = () => { const s = ALL.find((x) => x.id === +b.dataset.full); save(s, Number(s.due), null, null); });
+  $('tb').querySelectorAll('button[data-ed]').forEach((b) => b.onclick = () => edit(ALL.find((x) => x.id === +b.dataset.ed)));
 }
-$('q').oninput = draw; $('flt').onchange = draw;
+async function save(s, paid, extra, note) {
+  const { data, error } = await sb.rpc('set_fee_payment', { p_student: s.id, p_paid: paid, p_extra: extra, p_note: note });
+  if (error) { toast('حصل خطأ: ' + error.message); return false; }
+  Object.assign(s, { fees_status: data.status, paid: data.paid, extra: data.extra, extra_note: data.note, due: data.due }); draw(); return true;
+}
+function edit(s) {
+  const m = $('modal'); m.classList.remove('hidden');
+  m.innerHTML = `<div class="panel" style="max-width:440px;width:100%"><h3 style="margin-top:0">${esc(s.name)}</h3><p class="muted" style="margin:0 0 10px">${esc(grp(s.level))} — سعر الفرقة ${money(Number(s.due) - Number(s.extra))}</p>
+    <label class="f">المبلغ المدفوع (إجمالي)<input id="eP" inputmode="decimal" value="${Number(s.paid)}"></label>
+    <label class="f" style="margin-top:8px">رسوم أخرى (مادة تخلفات أو غيره)<input id="eX" inputmode="decimal" value="${Number(s.extra)}"></label>
+    <label class="f" style="margin-top:8px">سبب الرسوم الأخرى<input id="eN" value="${esc(s.extra_note || '')}" placeholder="مثلًا: مادة تخلفات"></label>
+    <div class="err" id="eE"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="eS">حفظ</button><button class="btn ghost" id="eC">إلغاء</button></div></div>`;
+  $('eC').onclick = () => m.classList.add('hidden');
+  $('eS').onclick = async () => {
+    const p = num($('eP').value), x = num($('eX').value);
+    if (p == null || isNaN(p) || x == null || isNaN(x)) { $('eE').textContent = 'اكتب المبالغ أرقام بس'; return; }
+    if (await save(s, p, x, $('eN').value)) m.classList.add('hidden');
+  };
+}
+$('q').oninput = draw; $('flt').onchange = draw; $('fl').onchange = draw;
 const PAID = /^(مدفوع|تم|سدد|سداد|دفع|paid|yes|نعم|1|✔|✓)/i;
 function parseFile(wb) {
   const items = [];
   for (const name of wb.SheetNames) {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
     let hi = rows.findIndex((r) => r.some((c) => /اسم|كود/.test(String(c))));
-    let ci = -1, ni = -1, si = -1;
-    if (hi >= 0) rows[hi].forEach((c, i) => { const t = String(c).replace(/\s/g, ''); if (/كود/.test(t) && ci < 0) ci = i; else if (/اسم|الاسم/.test(t) && ni < 0) ni = i; else if (/الحالة|السداد|الرسوم/.test(t) && si < 0) si = i; });
+    let ci = -1, ni = -1, si = -1, ai = -1;
+    if (hi >= 0) rows[hi].forEach((c, i) => { const t = String(c).replace(/\s/g, ''); if (/كود/.test(t) && ci < 0) ci = i; else if (/اسم|الاسم/.test(t) && ni < 0) ni = i; else if (/المبلغ|المدفوع|القيمة/.test(t) && ai < 0) ai = i; else if (/الحالة|السداد|الرسوم/.test(t) && si < 0) si = i; });
     if (ci < 0 && ni < 0) { hi = 0; ni = 1; }
     for (const r of rows.slice(hi + 1)) {
       const code = ci >= 0 ? toLatin(String(r[ci])).replace(/\D/g, '') : '', nm = ni >= 0 ? String(r[ni]).trim() : '';
       if (!code && !nm) continue;
-      items.push({ sheet: name, code, name: nm, paid: si >= 0 ? PAID.test(String(r[si]).trim()) : true });
+      const amt = ai >= 0 ? num(r[ai]) : null;
+      items.push({ sheet: name, code, name: nm, amount: amt != null && !isNaN(amt) ? amt : null, paid: si >= 0 ? PAID.test(String(r[si]).trim()) : true });
     }
   }
   return items;
@@ -173,29 +210,29 @@ $('up').onchange = async (e) => {
     let s = it.code ? byCode.get(it.code) : null;
     if (!s && it.name) { const m = byName.get(norm(it.name)); if (m && m.length === 1) s = m[0]; else if (m && m.length > 1) { amb.push(it); continue; } }
     if (!s) { miss.push(it); continue; }
-    hit.set(s.id, { code: s.code, status: it.paid ? 'paid' : 'unpaid', name: s.name });
+    hit.set(s.id, { code: s.code, status: it.paid ? 'paid' : 'unpaid', amount: it.amount, name: s.name });
   }
-  const paidN = [...hit.values()].filter((x) => x.status === 'paid').length;
+  const paidN = [...hit.values()].filter((x) => x.amount != null ? x.amount > 0 : x.status === 'paid').length;
   const m = $('modal'); m.classList.remove('hidden');
   m.innerHTML = `<div class="panel" style="max-width:520px;width:100%;max-height:90vh;overflow:auto"><h3>مراجعة الملف قبل الحفظ</h3>
     <p>اتقرا من الملف: <b>${items.length}</b> اسم</p>
-    <p>✓ اتطابقوا مع طلاب النظام: <b>${hit.size}</b> (منهم دفعوا: <b>${paidN}</b>)</p>
+    <p>✓ اتطابقوا مع طلاب النظام: <b>${hit.size}</b> (منهم دافعين: <b>${paidN}</b>)</p>
     <p>${miss.length ? '⚠️' : '✓'} مش موجودين في طلابنا: <b>${miss.length}</b> <span class="muted">(غالبًا فرق تانية لسه ما اتضافتش)</span></p>
     ${amb.length ? `<p>⚠️ اسم متكرر بين أكتر من طالب: <b>${amb.length}</b></p>` : ''}
-    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="rest"> كل اللي مش في الملف يتحوّلوا لـ"لسه" (برتقالي)</label>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="rest"> كل اللي مش في الملف يتحوّلوا لـ"لم يتم الدفع" (المدفوع = 0)</label>
     <div class="row"><button class="btn" id="ok">حفظ</button><button class="btn ghost" id="xm">تنزيل اللي ما اتطابقوش</button><button class="btn ghost" id="no">إلغاء</button></div></div>`;
   $('no').onclick = () => m.classList.add('hidden');
   $('xm').onclick = () => exportXlsx(miss.concat(amb).map((x, i) => [i + 1, x.name, x.code, x.sheet]), ['#', 'الاسم', 'الكود', 'الورقة'], 'غير مطابق', 'غير-مطابقين.xlsx');
   $('ok').onclick = async () => {
-    const list = [...hit.values()].map((x) => ({ code: x.code, status: x.status }));
+    const list = [...hit.values()].map((x) => (x.amount != null ? { code: x.code, amount: String(x.amount) } : { code: x.code, status: x.status }));
     if ($('rest').checked) ALL.forEach((s) => { if (!hit.has(s.id)) list.push({ code: s.code, status: 'unpaid' }); });
     $('ok').disabled = true; let u = 0;
     for (let i = 0; i < list.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: list.slice(i, i + 300) }); if (error) { toast('حصل خطأ: ' + error.message); $('ok').disabled = false; return; } u += data.updated; }
     m.classList.add('hidden'); toast('اتحدّث ' + u + ' طالب'); load();
   };
 };
-const ex = (pred, label, file) => exportXlsx(ALL.filter(pred).map((s, i) => [i + 1, s.code, s.name, grp(s.level), s.track, s.fees_status === 'paid' ? 'دفع' : (s.fees_status === 'unpaid' ? 'لسه' : 'غير محدد')]), ['#', 'الكود', 'الاسم', 'الفرقة', 'الشعبة', 'الرسوم'], label, file);
-$('xUn').onclick = () => ex((s) => s.fees_status !== 'paid', 'لسه', 'لسه-ما-دفعوش.xlsx');
+const ex = (pred, label, file) => exportXlsx(ALL.filter(pred).map((s, i) => [i + 1, s.code, s.name, grp(s.level), Number(s.due), Number(s.extra), s.extra_note || '', Number(s.paid), rest(s), (ST[s.fees_status] || ['—'])[0]]), ['#', 'الكود', 'الاسم', 'الفرقة', 'المطلوب', 'رسوم أخرى', 'سبب الرسوم الأخرى', 'المدفوع', 'المتبقي', 'الحالة'], label, file);
+$('xUn').onclick = () => ex((s) => s.fees_status !== 'paid', 'عليهم رسوم', 'عليهم-رسوم.xlsx');
 $('xPd').onclick = () => ex((s) => s.fees_status === 'paid', 'دفعوا', 'دفعوا-الرسوم.xlsx');
 Auth.init({ roles: ['accounts', 'admin'], title: 'الحسابات — الرسوم', onReady: load });
 </script>

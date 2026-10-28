@@ -97,7 +97,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const fmtTime = (t) => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' });
 const fmtDate = (t) => new Date(t).toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Africa/Cairo' });
 const todayCairo = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
-const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث' };
+const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث', 4: 'المستوى الرابع', 5: 'أولى دبلومة', 6: 'ثانية دبلومة' };
+const money = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج';
 function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2800); }
 function exportXlsx(rows, headers, sheet, filename) {
   const data = [headers].concat(rows);
@@ -190,14 +191,14 @@ async function loadStu() {
     const { data } = await r; if (!data || !data.length) break; d = d.concat(data); from += data.length;
   }
   $('stN').textContent = d.length + ' طالب';
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">متبقي</span>' : '<span class="muted">—</span>')}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
   $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => { await sb.rpc('set_card_received', { p_student: +b.dataset.c, p_received: b.dataset.r !== '1' }); loadStu(); loadSum(); });
 }
 async function loadSum() {
   const c = (f) => f(sb.from('students').select('id', { count: 'exact', head: true }).eq('active', true));
-  const [t, r, p, u] = await Promise.all([c((q) => q), c((q) => q.not('card_received_at', 'is', null)), c((q) => q.eq('fees_status', 'paid')), c((q) => q.eq('fees_status', 'unpaid'))]);
-  $('sum').textContent = `— الكل ${t.count} • استلموا الكارنيه ${r.count} • رسوم مدفوعة ${p.count} • متبقي ${u.count}`;
+  const [t, r, p, u, pp] = await Promise.all([c((q) => q), c((q) => q.not('card_received_at', 'is', null)), c((q) => q.eq('fees_status', 'paid')), c((q) => q.eq('fees_status', 'unpaid')), c((q) => q.eq('fees_status', 'partial'))]);
+  $('sum').textContent = `— الكل ${t.count} • استلموا الكارنيه ${r.count} • تم الدفع ${p.count} • متبقي جزء ${pp.count} • لم يدفع ${u.count}`;
 }
 async function allStu(filter) {
   let out = [], from = 0;
@@ -205,7 +206,7 @@ async function allStu(filter) {
   return out;
 }
 $('cX').onclick = async () => { const d = await allStu((q) => q.is('card_received_at', null)); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما استلموش', 'ما-استلموش-الكارنيه.xlsx'); toast('العدد: ' + d.length); };
-$('fX').onclick = async () => { const d = await allStu((q) => q.neq('fees_status', 'paid')); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'unpaid' ? 'متبقي' : 'غير محدد']), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الرسوم'], 'رسوم', 'رسوم-متبقية.xlsx'); toast('العدد: ' + d.length); };
+$('fX').onclick = async () => { const d = await allStu((q) => q.neq('fees_status', 'paid')); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'partial' ? 'متبقي جزء' : (r.fees_status === 'unpaid' ? 'لم يدفع' : 'غير محدد')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الرسوم'], 'رسوم', 'رسوم-متبقية.xlsx'); toast('العدد: ' + d.length); };
 $('fUp').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return; e.target.value = '';
   const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });

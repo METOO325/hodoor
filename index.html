@@ -82,7 +82,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const fmtTime = (t) => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Cairo' });
 const fmtDate = (t) => new Date(t).toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Africa/Cairo' });
 const todayCairo = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
-const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث' };
+const LEVEL_NAME = { 1: 'المستوى الأول', 2: 'المستوى الثاني', 3: 'المستوى الثالث', 4: 'المستوى الرابع', 5: 'أولى دبلومة', 6: 'ثانية دبلومة' };
+const money = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ج';
 function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2800); }
 function exportXlsx(rows, headers, sheet, filename) {
   const data = [headers].concat(rows);
@@ -228,7 +229,10 @@ function home() {
     const g = [data.level ? (LEVEL_NAME[data.level] || '') : '', data.track || ''].filter(Boolean).join(' — ');
     let h = g ? `<p class="muted" style="margin:0 0 10px">${esc(g)}</p>` : '';
     if (data.fees === 'paid') h += '<div class="res ok" style="padding:12px;margin-bottom:10px"><b>✓ تم دفع الرسوم</b></div>';
-    else if (data.fees === 'unpaid') h += '<div class="res warn" style="padding:12px;margin-bottom:10px"><b>في رسوم متبقية</b><div class="sub" style="font-size:.9rem">راجع شئون الطلبة / الحسابات</div></div>';
+    else if (data.fees === 'partial' || data.fees === 'unpaid') {
+      const rest = Math.max(0, Number(data.due || 0) - Number(data.paid || 0));
+      h += `<div class="res warn" style="padding:12px;margin-bottom:10px"><b>${data.fees === 'partial' ? 'متبقي عليك ' + money(rest) : 'لم يتم دفع الرسوم — المطلوب ' + money(data.due)}</b><div class="sub" style="font-size:.9rem">راجع الحسابات</div></div>`;
+    }
     $('info').innerHTML = h;
   });
   $('unbind').onclick = () => { if (confirm('هتمسح ربط الكارنيه من الجهاز ده. متأكد؟')) { LS.set('hd_token', ''); LS.set('hd_name', ''); home(); } };
