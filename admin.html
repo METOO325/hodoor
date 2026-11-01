@@ -73,7 +73,8 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 
 <section id="t-stu" class="hidden"><div class="panel"><div class="row"><label class="f" style="flex:1 1 260px">بحث بالاسم أو الكود<input id="stq"></label><button class="btn" id="stGo">بحث</button><span class="muted" id="stN"></span></div></div>
   <div class="panel"><h3>الكارنيهات والرسوم <span class="muted" id="sum"></span></h3><div class="row"><button class="btn ghost" id="cX">تنزيل اللي ما استلموش الكارنيه</button><button class="btn ghost" id="fX">تنزيل اللي عليهم رسوم</button><label class="btn" style="cursor:pointer">رفع ملف الرسوم (Excel)<input type="file" id="fUp" accept=".xlsx,.xls,.csv" hidden></label></div><div class="muted">ملف الرسوم: عمود "الكود" (أو "الرقم القومي") وعمود "الحالة": مدفوع / تم / سدد = أخضر، وأي حاجة تانية (لسه / غير مدفوع / فاضي) = برتقالي.</div></div>
-  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
+  <div class="panel"><h3>فصل طالب (مؤقت)</h3><div class="row"><label class="f" style="flex:1 1 180px">كود الطالب<input id="sc" inputmode="numeric"></label><label class="f">من يوم<input type="date" id="sf"></label><label class="f">إلى يوم<input type="date" id="st"></label><label class="f" style="flex:1 1 200px">ملاحظة (للإدارة بس)<input id="sn"></label><button class="btn danger" id="sGo">تسجيل الفصل</button><button class="btn ghost" id="sX">إلغاء الفصل</button></div><div class="muted">طول فترة الفصل، الطالب بيظهر عند الأمن <b>أسود "مفصول"</b> وما بيتسجّلش له دخول. بعد التاريخ بيرجع لحالته العادية لوحده.</div></div>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>الفصل</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
 
 <section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
   <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="accounts">حسابات</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
@@ -183,15 +184,22 @@ $('rGo').onclick = async () => {
   if (!data) return toast('الكود مش موجود'); if (!confirm('فك ربط جهاز: ' + data.name + '؟')) return;
   await sb.rpc('reset_device', { p_student: data.id }); toast('تم فك الربط'); $('rc').value = '';
 };
+const suspNow = (s) => s.susp_from && s.susp_to && todayCairo() >= s.susp_from && todayCairo() <= s.susp_to;
+const suspTag = (s) => suspNow(s) ? `<span class="tag" style="background:#111;color:#fff">مفصول ${esc(s.susp_from)} → ${esc(s.susp_to)}</span>` : (s.susp_from ? `<span class="muted">${esc(s.susp_from)} → ${esc(s.susp_to)}</span>` : '<span class="muted">—</span>');
+async function studentByCode(c) { const { data } = await sb.from('students').select('id,name').eq('code', toLatin(c).trim()).maybeSingle(); return data; }
+$('sGo').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('الكود ده مش موجود'); if (!$('sf').value || !$('st').value) return toast('اختار التاريخين');
+  if (!confirm('فصل ' + st.name + ' من ' + $('sf').value + ' إلى ' + $('st').value + '؟')) return;
+  const { error } = await sb.rpc('set_suspension', { p_student: st.id, p_from: $('sf').value, p_to: $('st').value, p_note: $('sn').value }); if (error) return toast('حصل خطأ (التاريخ؟)'); toast('تم تسجيل الفصل'); loadStu(); };
+$('sX').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('الكود ده مش موجود'); await sb.rpc('clear_suspension', { p_student: st.id }); toast('تم إلغاء الفصل'); loadStu(); };
 async function loadStu() {
   const q = toLatin($('stq').value).trim(); let d = [], from = 0;
   for (;;) {
-    let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status').order('name').range(from, from + 199);
+    let r = sb.from('students').select('id,code,name,level,track,status,active,card_received_at,fees_status,susp_from,susp_to').order('name').range(from, from + 199);
     if (q) r = /^\d+$/.test(q) ? r.ilike('code', q + '%') : r.ilike('name', '%' + q + '%');
     const { data } = await r; if (!data || !data.length) break; d = d.concat(data); from += data.length;
   }
   $('stN').textContent = d.length + ' طالب';
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓' : 'لسه'}</button></td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(); });
   $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => { await sb.rpc('set_card_received', { p_student: +b.dataset.c, p_received: b.dataset.r !== '1' }); loadStu(); loadSum(); });
 }
