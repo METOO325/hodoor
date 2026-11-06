@@ -200,16 +200,17 @@ async function submit(x) {
   return result('bad', '✕', 'الكارنيه مش معروف', 'اربط جهازك من جديد');
 }
 async function bind(token) {
-  token = String(token || '').trim().toUpperCase();
+  token = toLatin(token).replace(/\s+/g, '').toUpperCase();
+  if (!token) return { ok: false, msg: 'اكتب كود الطالب الأول.' };
   const { data, error } = await sb.rpc('bind_device', { p_token: token, p_key: devKey() });
   if (error || !data) return { ok: false, msg: 'حصل خطأ في الاتصال' };
-  if (data.status === 'not_found') return { ok: false, msg: 'الكود ده مش موجود. اتأكد إنك بتمسح الباركود اللي على الكارنيه.' };
+  if (data.status === 'not_found') return { ok: false, msg: 'الكود ده مش موجود. اتأكد من كود الطالب المكتوب على الكارنيه.' };
   if (data.status === 'pending') return { ok: false, pending: true, name: data.name };
-  if (data.ok) { LS.set('hd_token', token); LS.set('hd_name', data.name); return { ok: true, name: data.name }; }
+  if (data.ok) { LS.set('hd_token', data.token || token); LS.set('hd_name', data.name); return { ok: true, name: data.name }; }
   return { ok: false, msg: 'مقدرتش أربط الجهاز' };
 }
 function setup(msg) {
-  view(`<div class="card"><h2 style="margin-top:0">ربط جهازك بالكارنيه</h2><p class="muted">أول مرة بس: وجّه الكاميرا على الباركود اللي في ركن الكارنيه.</p><div class="cam"><video id="v" muted></video><div class="frame"></div></div><div class="err" id="e">${esc(msg || '')}</div><p class="muted" style="margin:6px 0">أو اكتب الكود المطبوع تحت الباركود:</p><div class="row"><input id="t" placeholder="EGT-XXXXXXXX" dir="ltr" style="flex:1;text-transform:uppercase"><button class="btn" id="go">ربط</button></div></div>`);
+  view(`<div class="card"><h2 style="margin-top:0">ربط جهازك بالكارنيه</h2><p class="muted">أول مرة بس: وجّه الكاميرا على الباركود اللي في ركن الكارنيه.</p><div class="cam"><video id="v" muted></video><div class="frame"></div></div><div class="err" id="e">${esc(msg || '')}</div><p class="muted" style="margin:6px 0">أو اكتب <b>كود الطالب</b> المكتوب على الكارنيه:</p><div class="row"><input id="t" placeholder="كود الطالب" dir="ltr" inputmode="numeric" autocomplete="off" style="flex:1"><button class="btn" id="go">ربط</button></div></div>`);
   const done = async (tk) => {
     $('e').textContent = 'جاري الربط…'; const r = await bind(tk);
     if (r.ok) return home();
@@ -218,6 +219,8 @@ function setup(msg) {
   };
   sc = Scanner($('v'), (c) => { if (/^EGT-[A-Z0-9]{8}$/i.test(c)) done(c); }, { onError: () => { $('e').textContent = 'الكاميرا مش شغالة. اكتب الكود يدويًا.'; } });
   sc.start(); $('go').onclick = () => done($('t').value);
+  $('t').addEventListener('input', () => { $('t').value = toLatin($('t').value).replace(/\s+/g, ''); });
+  $('t').addEventListener('keydown', (e) => { if (e.key === 'Enter') done($('t').value); });
 }
 function home() {
   const token = LS.get('hd_token'); if (!token) return setup();
