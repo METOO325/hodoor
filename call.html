@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تواصل مباشر – إيجوث</title>
+<style>
+:root{--navy:#0a1f44;--red:#c62828;--green:#1b7f4b;--bg:#f3f5f9;--card:#fff;--ink:#14213d;--mut:#5b6b85}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1626;--card:#16233b;--ink:#eef2fa;--mut:#9fb0cc}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;padding:16px}
+.card{width:100%;max-width:420px;background:var(--card);border-radius:20px;padding:28px 22px;text-align:center;box-shadow:0 8px 30px rgba(10,31,68,.15)}
+.inst{color:var(--mut);font-size:14px;margin-bottom:6px}
+h1{margin:0 0 4px;font-size:26px;color:var(--navy)}
+@media (prefers-color-scheme:dark){h1{color:#fff}}
+.who{font-size:20px;margin:0 0 22px;color:var(--mut)}
+a.btn{display:block;text-decoration:none;font-size:22px;font-weight:700;padding:18px;border-radius:14px;margin:12px 0;color:#fff}
+.call{background:var(--navy)}
+.wa{background:var(--green)}
+.num{direction:ltr;color:var(--mut);margin-top:14px;font-size:15px}
+.err{color:var(--red);font-size:18px}
+</style>
+</head>
+<body>
+<div class="card" id="c"></div>
+<script>
+var D={
+  svc:{t:'قسم الخدمات',w:'أ/ حسن'},
+  elec:{t:'قسم الكهرباء',w:'أ/ عبدالله'},
+  halls:{t:'مسؤول المدرجات',w:'أ/ يوسف'},
+  hse:{t:'قسم السلامة والصحة المهنية والبيئة',w:'أ/ أحمد حجاج'}
+};
+(function(){
+  var q=new URLSearchParams(location.search),d=D[q.get('d')],p=(q.get('p')||'').replace(/\D/g,''),c=document.getElementById('c');
+  if(!d||!/^01\d{9}$/.test(p)){c.innerHTML='<div class="err">الرابط غير صحيح. امسح الكود المطبوع مرة تانية.</div>';return;}
+  var intl='20'+p.slice(1);
+  var msg=encodeURIComponent('السلام عليكم، محتاج مساعدتك في '+d.t+'.');
+  var h=document.createElement('div');
+  c.innerHTML='<div class="inst">المعهد العالي للسياحة والفنادق بالأقصر – إيجوث</div>'+
+   '<h1></h1><p class="who"></p>'+
+   '<a class="btn call" href="tel:+'+intl+'">📞 اتصال</a>'+
+   '<a class="btn wa" href="https://wa.me/'+intl+'?text='+msg+'">💬 رسالة واتساب</a>'+
+   '<div class="num"></div>';
+  c.querySelector('h1').textContent=d.t; c.querySelector('.who').textContent=d.w; c.querySelector('.num').textContent=p;
+})();
+</script>
+</body>
+</html>
