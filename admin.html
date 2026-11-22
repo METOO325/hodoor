@@ -60,7 +60,7 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 <section id="t-gate"><div class="panel"><div class="row">
   <label class="f">من يوم<input type="date" id="g1"></label><label class="f">إلى يوم<input type="date" id="g2"></label>
   <label class="f" style="flex:1 1 200px">بحث<input id="gq" placeholder="اسم أو كود"></label>
-  <button class="btn" id="gGo">عرض</button><button class="btn ghost" id="gX">تصدير Excel</button><button class="btn ghost" id="gAbs">اللي ما دخلوش (اليوم الأول)</button></div>
+  <button class="btn" id="gGo">عرض</button><button class="btn ghost" id="gX">تحميل Excel</button><button class="btn ghost" id="gAbs">الطلبة الذين لم يدخلوا (اليوم الأول)</button></div>
   <div class="muted" id="gSum" style="margin-top:8px"></div></div>
   <div class="tablewrap"><table><thead id="gH"></thead><tbody id="gB"></tbody></table></div></section>
 
@@ -69,17 +69,17 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
   <div class="tablewrap"><table><thead><tr><th>التاريخ</th><th>الدكتور</th><th>المادة</th><th>الفرقة / الشعبة</th><th>القاعة</th><th>حضر</th><th>من</th><th></th></tr></thead><tbody id="sB"></tbody></table></div></section>
 
 <section id="t-dev" class="hidden"><div class="panel"><h3>طلبات اعتماد جهاز جديد</h3><div id="dB" class="muted">…</div></div>
-  <div class="panel"><h3>فك ربط جهاز طالب (ضاع موبايله)</h3><div class="row"><label class="f" style="flex:1 1 240px">كود الطالب<input id="rc" inputmode="numeric"></label><button class="btn" id="rGo">فك الربط</button></div><div class="muted">بعد الفك الطالب بيربط موبايله الجديد بنفسه بمسح كارنيهه.</div></div></section>
+  <div class="panel"><h3>فك ربط جهاز طالب (فُقد هاتفه)</h3><div class="row"><label class="f" style="flex:1 1 240px">كود الطالب<input id="rc" inputmode="numeric"></label><button class="btn" id="rGo">فك الربط</button></div><div class="muted">بعد فك الربط، يربط الطالب هاتفه الجديد بنفسه عن طريق مسح الكارنيه.</div></div></section>
 
 <section id="t-stu" class="hidden"><div class="panel"><div class="row">
   <label class="f" style="flex:1 1 220px">بحث بالاسم أو الكود<input id="stq" placeholder="مثلاً: محمد"></label>
   <label class="f">الفرقة<select id="stL"><option value="">الكل</option><option value="1">الأولى</option><option value="2">الثانية</option><option value="3">الثالثة</option><option value="4">الرابعة</option></select></label>
   <label class="f">الشعبة<select id="stT"><option value="">الكل</option></select></label>
-  <label class="f">الكارنيه<select id="stM"><option value="">الكل</option><option value="y">استلم</option><option value="n">لسه ما استلمش</option></select></label>
+  <label class="f">الكارنيه<select id="stM"><option value="">الكل</option><option value="y">استلم</option><option value="n">لم يستلم</option></select></label>
   <button class="btn" id="stGo">عرض</button><button class="btn ghost" id="stR">مسح الفلاتر</button></div>
-  <div class="row" style="margin-top:8px"><span class="muted" id="stN"></span><span style="flex:1"></span><button class="btn ghost" id="mY">تحميل اللي استلم</button><button class="btn ghost" id="mN">تحميل اللي لسه ما استلمش</button><button class="btn" id="mA">تحميل النتيجة الحالية</button></div></div>
-  <div class="panel"><h3>الكارنيهات والرسوم <span class="muted" id="sum"></span></h3><div class="row"><button class="btn ghost" id="cX">تحميل اللي ما استلموش الكارنيه</button><button class="btn ghost" id="fX">تحميل اللي عليهم رسوم</button><label class="btn" style="cursor:pointer">رفع ملف الرسوم (Excel)<input type="file" id="fUp" accept=".xlsx,.xls,.csv" hidden></label></div><div class="muted">ملف الرسوم: عمود "الكود" (أو "الرقم القومي") وعمود "الحالة": مدفوع / تم / سدد = أخضر، وأي حاجة تانية (لسه / غير مدفوع / فاضي) = برتقالي.</div></div>
-  <div class="panel"><h3>فصل طالب (مؤقت)</h3><div class="row"><label class="f" style="flex:1 1 180px">كود الطالب أو كود الكارنيه (EGT-…)<input id="sc" dir="ltr"></label><label class="f">من يوم<input type="date" id="sf"></label><label class="f">إلى يوم<input type="date" id="st"></label><label class="f" style="flex:1 1 200px">ملاحظة (للإدارة بس)<input id="sn"></label><button class="btn danger" id="suspGo">تسجيل الفصل</button><button class="btn ghost" id="suspX">إلغاء الفصل</button></div><div class="muted">طول فترة الفصل، الطالب بيظهر عند الأمن <b>أسود "مفصول"</b> وما بيتسجّلش له دخول. بعد التاريخ بيرجع لحالته العادية لوحده.</div></div>
+  <div class="row" style="margin-top:8px"><span class="muted" id="stN"></span><span style="flex:1"></span><button class="btn ghost" id="mY">تحميل الطلبة الذين استلموا الكارنيه</button><button class="btn ghost" id="mN">تحميل الطلبة الذين لم يستلموا الكارنيه</button><button class="btn" id="mA">تحميل نتيجة البحث الحالية</button></div></div>
+  <div class="panel"><h3>الكارنيهات والرسوم <span class="muted" id="sum"></span></h3><div class="row"><button class="btn ghost" id="cX">تحميل جميع من لم يستلموا الكارنيه (كل الفرق)</button><button class="btn ghost" id="fX">تحميل الطلبة المتبقي عليهم رسوم (كل الفرق)</button><label class="btn" style="cursor:pointer">رفع ملف الرسوم (Excel)<input type="file" id="fUp" accept=".xlsx,.xls,.csv" hidden></label></div><div class="muted">ملف الرسوم: عمود "الكود" (أو "الرقم القومي") وعمود "الحالة": مدفوع / تم / سدد = أخضر، وأي قيمة أخرى (لم يدفع / غير مدفوع / فارغ) = برتقالي.</div></div>
+  <div class="panel"><h3>فصل طالب (مؤقت)</h3><div class="row"><label class="f" style="flex:1 1 180px">كود الطالب أو كود الكارنيه (EGT-…)<input id="sc" dir="ltr"></label><label class="f">من يوم<input type="date" id="sf"></label><label class="f">إلى يوم<input type="date" id="st"></label><label class="f" style="flex:1 1 200px">ملاحظة (للإدارة فقط)<input id="sn"></label><button class="btn danger" id="suspGo">تسجيل الفصل</button><button class="btn ghost" id="suspX">إلغاء الفصل</button></div><div class="muted">طوال فترة الفصل، يظهر الطالب عند الأمن <b>أسود "مفصول"</b> ولا يُسجَّل له دخول. بعد انتهاء المدة يعود لحالته العادية تلقائياً.</div></div>
   <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>الفصل</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
 
 <section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
@@ -135,7 +135,7 @@ const Auth = {
       if (error) return show('تعذر التحقق من الصلاحية');
       if (!opt.roles.includes(role)) {
         await sb.auth.signOut();
-        return show(role === 'none' || !role ? 'حسابك لسه ملوش صلاحية. كلّم الإدارة.' : 'الحساب ده مالوش صلاحية على الصفحة دي.');
+        return show(role === 'none' || !role ? 'ليس لحسابك صلاحية حتى الآن. تواصل مع الإدارة.' : 'هذا الحساب ليس له صلاحية على هذه الصفحة.');
       }
       root.classList.add('hidden'); $('app').classList.remove('hidden');
       const u = session.user; const name = (u.user_metadata && (u.user_metadata.display_name || u.user_metadata.full_name)) || u.email;
@@ -158,7 +158,7 @@ $('tabs').onclick = (e) => { if (e.target.dataset.t) tab(e.target.dataset.t); };
 async function loadGate() {
   $('gH').innerHTML = '<tr><th>#</th><th>الوقت</th><th>الاسم</th><th>الكود</th><th>الفرقة / الشعبة</th><th>طريقة الدخول</th><th>ملاحظات</th><th>الأمن</th></tr>';
   const { data, error } = await sb.rpc('report_gate', { p_from: $('g1').value, p_to: $('g2').value });
-  if (error) return toast('حصل خطأ: ' + error.message); gRows = data || []; drawGate();
+  if (error) return toast('حدث خطأ: ' + error.message); gRows = data || []; drawGate();
 }
 function drawGate() {
   const q = toLatin($('gq').value).trim(); const R = gRows.filter((r) => !q || (r.name || '').includes(q) || (r.code || '').includes(q));
@@ -171,11 +171,11 @@ function drawGate() {
 $('gGo').onclick = loadGate; $('gq').oninput = drawGate;
 $('gX').onclick = () => { const R = window.__gR || []; exportXlsx(R.map((r, i) => [i + 1, fmtDate(r.at), fmtTime(r.at), r.name, r.code || '', grp(r.level, r.track), KIND[r.kind] || r.kind, r.visitor_nid || '', r.purpose || '', r.security || '']), ['#', 'التاريخ', 'الوقت', 'الاسم', 'الكود', 'الفرقة / الشعبة', 'طريقة الدخول', 'رقم قومي الزائر', 'سبب الزيارة', 'الأمن'], 'دخول', 'تقرير-الدخول-' + $('g1').value + '.xlsx'); };
 $('gAbs').onclick = async () => {
-  const { data, error } = await sb.rpc('report_gate_absent', { p_day: $('g1').value }); if (error) return toast('حصل خطأ');
-  const d = data || []; exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما دخلوش', 'ما-دخلوش-' + $('g1').value + '.xlsx'); toast('عدد اللي ما دخلوش: ' + d.length);
+  const { data, error } = await sb.rpc('report_gate_absent', { p_day: $('g1').value }); if (error) return toast('حدث خطأ');
+  const d = data || []; exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'لم يدخلوا', 'لم-يدخلوا-' + $('g1').value + '.xlsx'); toast('عدد الطلبة الذين لم يدخلوا: ' + d.length);
 };
 async function loadSes() {
-  const { data, error } = await sb.rpc('report_sessions', { p_from: $('s1').value, p_to: $('s2').value }); if (error) return toast('حصل خطأ');
+  const { data, error } = await sb.rpc('report_sessions', { p_from: $('s1').value, p_to: $('s2').value }); if (error) return toast('حدث خطأ');
   $('sB').innerHTML = (data || []).map((s) => `<tr><td>${fmtDate(s.started_at)} ${fmtTime(s.started_at)}</td><td>${esc(s.doctor)}</td><td>${esc(s.course)}</td><td>${esc(s.group_title || '')}</td><td>${esc(s.room || '')}</td><td><b>${s.present}</b></td><td>${s.roster}</td><td><button class="btn ghost sm" data-id="${s.id}" data-c="${esc(s.course)}">Excel</button></td></tr>`).join('') || '<tr><td colspan="8" class="muted">مفيش محاضرات في الفترة دي</td></tr>';
   $('sB').querySelectorAll('button').forEach((b) => b.onclick = async () => { const { data: r } = await sb.rpc('session_roster', { p_session: b.dataset.id }); exportXlsx((r || []).map((x, i) => [i + 1, x.code, x.name, x.present ? 'حضر' : 'غائب', x.at ? fmtTime(x.at) : '', x.off_roster ? 'خارج الشعبة' : '']), ['#', 'كود الطالب', 'الاسم', 'الحالة', 'وقت الحضور', 'ملاحظة'], 'الحضور', 'حضور-' + b.dataset.c.slice(0, 30) + '.xlsx'); });
 }
@@ -187,16 +187,16 @@ async function loadDev() {
 }
 $('rGo').onclick = async () => {
   const c = toLatin($('rc').value).trim(); const { data } = await sb.from('students').select('id,name').eq('code', c).maybeSingle();
-  if (!data) return toast('الكود مش موجود'); if (!confirm('فك ربط جهاز: ' + data.name + '؟')) return;
+  if (!data) return toast('هذا الكود غير موجود'); if (!confirm('فك ربط جهاز: ' + data.name + '؟')) return;
   await sb.rpc('reset_device', { p_student: data.id }); toast('تم فك الربط'); $('rc').value = '';
 };
 const suspNow = (s) => s.susp_from && s.susp_to && todayCairo() >= s.susp_from && todayCairo() <= s.susp_to;
 const suspTag = (s) => suspNow(s) ? `<span class="tag" style="background:#111;color:#fff">مفصول ${esc(s.susp_from)} → ${esc(s.susp_to)}</span>` : (s.susp_from ? `<span class="muted">${esc(s.susp_from)} → ${esc(s.susp_to)}</span>` : '<span class="muted">—</span>');
 async function studentByCode(c) { const v = toLatin(c).trim(); if (!v) return null; const q = sb.from('students').select('id,name'); const { data } = await (/^egt-/i.test(v) ? q.eq('token', v.toUpperCase()) : q.eq('code', v)).maybeSingle(); return data; }
-$('suspGo').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('الكود ده مش موجود'); if (!$('sf').value || !$('st').value) return toast('اختار التاريخين');
+$('suspGo').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('هذا الكود غير موجود'); if (!$('sf').value || !$('st').value) return toast('اختار التاريخين');
   if (!confirm('فصل ' + st.name + ' من ' + $('sf').value + ' إلى ' + $('st').value + '؟')) return;
-  const { error } = await sb.rpc('set_suspension', { p_student: st.id, p_from: $('sf').value, p_to: $('st').value, p_note: $('sn').value }); if (error) return toast('حصل خطأ (التاريخ؟)'); toast('تم تسجيل الفصل'); loadStu(true); };
-$('suspX').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('الكود ده مش موجود'); await sb.rpc('clear_suspension', { p_student: st.id }); toast('تم إلغاء الفصل'); loadStu(true); };
+  const { error } = await sb.rpc('set_suspension', { p_student: st.id, p_from: $('sf').value, p_to: $('st').value, p_note: $('sn').value }); if (error) return toast('حدث خطأ (التاريخ؟)'); toast('تم تسجيل الفصل'); loadStu(true); };
+$('suspX').onclick = async () => { const st = await studentByCode($('sc').value); if (!st) return toast('هذا الكود غير موجود'); await sb.rpc('clear_suspension', { p_student: st.id }); toast('تم إلغاء الفصل'); loadStu(true); };
 let STU = null;
 const nrm = (x) => toLatin(String(x || '')).toLowerCase().replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/[ً-ْـ]/g, '').replace(/\s+/g, ' ').trim();
 async function fetchAll(table, cols, orderCols, filter) {
@@ -205,7 +205,7 @@ async function fetchAll(table, cols, orderCols, filter) {
     let q = sb.from(table).select(cols); if (filter) q = filter(q);
     orderCols.forEach((c) => { q = q.order(c); });
     const { data, error } = await q.range(from, from + 999);
-    if (error) { toast('حصل خطأ في تحميل البيانات'); return out; }
+    if (error) { toast('حدث خطأ في تحميل البيانات'); return out; }
     if (!data || !data.length) break; out = out.concat(data); from += data.length; if (data.length < 1000) break;
   }
   return out;
@@ -231,18 +231,18 @@ function stuFiltered() {
 }
 function drawStu() {
   const d = stuFiltered(), all = STU || [], yes = all.filter((s) => s.rec).length;
-  $('stN').textContent = `النتيجة: ${d.length} طالب • استلموا الكارنيه ${yes} من ${all.length} • لسه ${all.length - yes}`;
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td>${s.rec ? '<span class="tag">استلم ✓</span>' : '<span class="tag warn">لسه</span>'}</td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stN').textContent = `النتيجة: ${d.length} طالب • استلموا الكارنيه ${yes} من ${all.length} • لم يستلموا ${all.length - yes}`;
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td>${s.rec ? '<span class="tag">استلم ✓</span>' : '<span class="tag warn">لم يستلم</span>'}</td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(true); });
 }
 function devXlsx(list, name) {
-  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.rec ? 'استلم' : 'لسه ما استلمش', r.dev ? new Date(r.dev).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) : '']), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الكارنيه', 'وقت تسجيل الدخول بالموبايل'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
+  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.rec ? 'استلم' : 'لم يستلم', r.dev ? new Date(r.dev).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) : '']), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الكارنيه', 'وقت تسجيل الدخول بالموبايل'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
 }
 ['stL', 'stT', 'stM'].forEach((i) => { $(i).onchange = () => STU && drawStu(); });
 $('stq').oninput = () => STU && drawStu();
 $('stR').onclick = () => { $('stq').value = ''; $('stL').value = ''; $('stT').value = ''; $('stM').value = ''; drawStu(); };
 $('mY').onclick = () => devXlsx(stuFiltered().filter((s) => s.rec), 'استلموا-الكارنيه');
-$('mN').onclick = () => devXlsx(stuFiltered().filter((s) => !s.rec), 'لسه-ما-استلموش');
+$('mN').onclick = () => devXlsx(stuFiltered().filter((s) => !s.rec), 'لم-يستلموا-الكارنيه');
 $('mA').onclick = () => devXlsx(stuFiltered(), 'نتيجة-البحث');
 async function loadSum() {
   const c = (f) => f(sb.from('students').select('id', { count: 'exact', head: true }).eq('active', true));
@@ -255,19 +255,19 @@ async function allStu(filter) {
   for (;;) { const { data } = await filter(sb.from('students').select('id,code,name,level,track,card_received_at,fees_status').eq('active', true).order('name').order('id').range(from, from + 199)); if (!data || !data.length) break; out = out.concat(data); from += data.length; }
   return out;
 }
-$('cX').onclick = async () => { if (!STU) await loadStu(); const d = STU.filter((s) => !s.rec); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'ما استلموش', 'ما-استلموش-الكارنيه.xlsx'); toast('العدد: ' + d.length); };
-$('fX').onclick = async () => { const d = await allStu((q) => q.neq('fees_status', 'paid')); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'partial' ? 'متبقي جزء' : (r.fees_status === 'unpaid' ? 'لم يدفع' : 'غير محدد')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الرسوم'], 'رسوم', 'رسوم-متبقية.xlsx'); toast('العدد: ' + d.length); };
+$('cX').onclick = async () => { if (!STU) await loadStu(); const d = STU.filter((s) => !s.rec); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track)]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة'], 'لم يستلموا', 'لم-يستلموا-الكارنيه.xlsx'); toast('العدد: ' + d.length); };
+$('fX').onclick = async () => { const d = await allStu((q) => q.neq('fees_status', 'paid')); exportXlsx(d.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'partial' ? 'متبقي جزء' : (r.fees_status === 'unpaid' ? 'لم يدفع' : 'غير محدد')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الرسوم'], 'رسوم', 'الرسوم-المتبقية.xlsx'); toast('العدد: ' + d.length); };
 $('fUp').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return; e.target.value = '';
   const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
   const key = (r, names) => { for (const k of Object.keys(r)) if (names.some((n) => String(k).replace(/\s/g, '').includes(n))) return r[k]; return ''; };
   const PAID = /^(مدفوع|تم|سدد|سداد|دفع|paid|yes|نعم|1|✔|✓)/i;
   const items = rows.map((r) => ({ code: toLatin(String(key(r, ['الكود', 'كود']))).replace(/\D/g, ''), nid: toLatin(String(key(r, ['القومي', 'قومى']))).replace(/\D/g, ''), status: PAID.test(String(key(r, ['الحالة', 'السداد', 'الرسوم'])).trim()) ? 'paid' : 'unpaid' })).filter((x) => x.code || x.nid);
-  if (!items.length) return toast('ما لقيتش عمود الكود أو الرقم القومي');
-  if (!confirm('هيتحدّث ' + items.length + ' طالب. تكمل؟')) return;
+  if (!items.length) return toast('لم أجد عمود الكود أو الرقم القومي');
+  if (!confirm('سيتم تحديث ' + items.length + ' طالب. هل تريد المتابعة؟')) return;
   let upd = 0, skp = 0;
-  for (let i = 0; i < items.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: items.slice(i, i + 300) }); if (error) return toast('حصل خطأ: ' + error.message); upd += data.updated; skp += data.skipped; }
-  toast('اتحدّث ' + upd + ' — اتخطّى ' + skp); loadStu(true); loadSum();
+  for (let i = 0; i < items.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: items.slice(i, i + 300) }); if (error) return toast('حدث خطأ: ' + error.message); upd += data.updated; skp += data.skipped; }
+  toast('تم تحديث ' + upd + ' — تم تخطي ' + skp); loadStu(true); loadSum();
 };
 $('stGo').onclick = () => loadStu(true);
 async function loadStaff() { const { data } = await sb.rpc('list_staff'); $('stfB').innerHTML = (data || []).map((p) => `<tr><td>${esc(p.full_name)}</td><td dir="ltr" style="text-align:right">${esc(p.email)}</td><td><span class="tag ${p.role === 'none' ? 'bad' : ''}">${ROLE[p.role]}</span></td></tr>`).join(''); }
