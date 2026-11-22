@@ -232,11 +232,18 @@ function stuFiltered() {
 function drawStu() {
   const d = stuFiltered(), all = STU || [], yes = all.filter((s) => s.rec).length;
   $('stN').textContent = `النتيجة: ${d.length} طالب • استلموا الكارنيه ${yes} من ${all.length} • لم يستلموا ${all.length - yes}`;
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td>${s.rec ? '<span class="tag">استلم ✓</span>' : '<span class="tag warn">لم يستلم</span>'}</td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td>${s.dev ? '<span class="tag">استلم ✓ (بالموبايل)</span>' : `<button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓ (يدوي)' : 'لم يستلم — اضغط للتأكيد'}</button>${s.card_received_at ? `<div class="muted" style="font-size:.75rem">${new Date(s.card_received_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</div>` : ''}`}</td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => {
+    const id = +b.dataset.c, was = b.dataset.r === '1'; b.disabled = true;
+    const { error } = await sb.rpc('set_card_received', { p_student: id, p_received: !was });
+    if (error) { b.disabled = false; return toast('حدث خطأ'); }
+    const st = STU.find((x) => x.id === id); st.card_received_at = was ? null : new Date().toISOString(); st.rec = !!(st.dev || st.card_received_at); drawStu(); loadSum();
+  });
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(true); });
 }
 function devXlsx(list, name) {
-  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.rec ? 'استلم' : 'لم يستلم', r.dev ? new Date(r.dev).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' }) : '']), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الكارنيه', 'وقت تسجيل الدخول بالموبايل'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
+  const dt = (t) => new Date(t).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
+  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.rec ? 'استلم' : 'لم يستلم', r.dev ? 'بالموبايل' : (r.card_received_at ? 'يدوي' : ''), r.dev ? dt(r.dev) : (r.card_received_at ? dt(r.card_received_at) : '')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الكارنيه', 'طريقة الاستلام', 'وقت الاستلام'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
 }
 ['stL', 'stT', 'stM'].forEach((i) => { $(i).onchange = () => STU && drawStu(); });
 $('stq').oninput = () => STU && drawStu();
