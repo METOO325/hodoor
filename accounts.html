@@ -57,10 +57,10 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
 <main><div class="wrap">
   <details class="panel" id="lv"><summary style="cursor:pointer;font-weight:600">أسعار الرسوم لكل فرقة (اضغط للتعديل)</summary><div class="row" id="lvRow" style="margin-top:10px"></div></details>
   <div class="panel"><h3>الملخص <span class="muted" id="sum"></span></h3>
-    <div class="row"><label class="btn" style="cursor:pointer">رفع كشف المدفوعين (Excel)<input type="file" id="up" accept=".xlsx,.xls,.csv" hidden></label><button class="btn ghost" id="xUn">تحميل اللي عليهم رسوم</button><button class="btn ghost" id="xPd">تحميل اللي دفعوا</button></div>
+    <div class="row"><label class="btn" style="cursor:pointer">رفع كشف المدفوعين (Excel)<input type="file" id="up" accept=".xlsx,.xls,.csv" hidden></label><button class="btn ghost" id="xUn">تحميل الطلبة المتبقي عليهم رسوم</button><button class="btn ghost" id="xPd">تحميل الطلبة الذين دفعوا</button><button class="btn ghost" id="xNp">تحميل من لم تتم طباعة كارنيهاتهم</button></div>
     <div class="muted" style="margin-top:8px">الكشف: أي ملف فيه أسماء (أو أكواد) الطلاب. لو فيه عمود "المبلغ" بنسجّل المبلغ المدفوع، ولو فيه عمود "الحالة" بنقرأه، ولو مفيش الاتنين بنعتبر كل اللي في الملف دفعوا كامل. الأسماء اللي مش لاقيينها بنعرضها قبل الحفظ.</div></div>
-  <div class="panel"><div class="row"><label class="f" style="flex:1 1 240px">بحث بالاسم أو الكود<input id="q"></label><label class="f">الفرقة<select id="fl"><option value="">الكل</option></select></label><label class="f">عرض<select id="flt"><option value="">الكل</option><option value="paid">تم الدفع</option><option value="partial">متبقي جزء</option><option value="unpaid">لم يتم الدفع</option><option value="extra">عليهم رسوم أخرى</option></select></label><span class="muted" id="cnt"></span></div></div>
-  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>المطلوب</th><th>رسوم أخرى</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  <div class="panel"><div class="row"><label class="f" style="flex:1 1 240px">بحث بالاسم أو الكود<input id="q"></label><label class="f">الفرقة<select id="fl"><option value="">الكل</option></select></label><label class="f">عرض<select id="flt"><option value="">الكل</option><option value="paid">تم الدفع</option><option value="partial">متبقي جزء</option><option value="unpaid">لم يتم الدفع</option><option value="extra">عليهم رسوم أخرى</option></select></label><label class="f">الطباعة<select id="fp"><option value="">الكل</option><option value="y">تمت الطباعة</option><option value="n">لم تتم الطباعة</option></select></label><label class="f">الكارنيه<select id="fc"><option value="">الكل</option><option value="y">استلم</option><option value="n">لم يستلم</option></select></label><span class="muted" id="cnt"></span></div></div>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>المطلوب</th><th>رسوم أخرى</th><th>المدفوع</th><th>المتبقي</th><th>الدفع</th><th>الطباعة</th><th>الكارنيه</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
 </div></main>
 </div>
 <div id="modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px"></div>
@@ -132,6 +132,7 @@ const norm = (n) => String(n || '').replace(/[ً-ْـ]/g, '').replace(/\s+/g, ''
 const grp = (l) => LEVEL_NAME[l] || ('مستوى ' + l);
 const num = (v) => { const t = toLatin(String(v == null ? '' : v)).replace(/[,،\s]/g, ''); return t === '' ? null : (/^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN); };
 const rest = (s) => Math.max(0, Number(s.due) - Number(s.paid));
+const rcv = (s) => !!(s.device_bound_at || s.card_received_at);
 const ST = { paid: ['تم الدفع', 'ok'], partial: ['متبقي جزء', 'warn'], unpaid: ['لم يتم الدفع', 'bad'] };
 async function loadLevels() {
   const { data, error } = await sb.rpc('fee_levels_list'); if (error) return;
@@ -139,7 +140,7 @@ async function loadLevels() {
   $('lvRow').querySelectorAll('button[data-sv]').forEach((b) => b.onclick = async () => {
     const v = num($('lvRow').querySelector(`input[data-l="${b.dataset.sv}"]`).value);
     if (v == null || isNaN(v)) return toast('اكتب المبلغ أرقام بس');
-    const { error } = await sb.rpc('set_level_fee', { p_level: +b.dataset.sv, p_amount: v }); if (error) return toast('حصل خطأ: ' + error.message);
+    const { error } = await sb.rpc('set_level_fee', { p_level: +b.dataset.sv, p_amount: v }); if (error) return toast('حدث خطأ: ' + error.message);
     toast('اتحفظ السعر واتحسبت حالات الطلبة من جديد'); load();
   });
   const used = new Set(ALL.map((s) => s.level));
@@ -147,23 +148,30 @@ async function loadLevels() {
 }
 async function load() {
   let out = [], off = 0;
-  for (;;) { const { data, error } = await sb.rpc('fees_list', { p_offset: off, p_limit: 200 }); if (error) { toast('حصل خطأ: ' + error.message); break; } if (!data || !data.length) break; out = out.concat(data); off += data.length; }
+  for (;;) { const { data, error } = await sb.rpc('fees_list', { p_offset: off, p_limit: 200 }); if (error) { toast('حدث خطأ: ' + error.message); break; } if (!data || !data.length) break; out = out.concat(data); off += data.length; }
   ALL = out; draw(); if (!$('lvRow').innerHTML) loadLevels();
 }
 function draw() {
   const c = { paid: 0, partial: 0, unpaid: 0 }; let got = 0, left = 0;
   ALL.forEach((s) => { if (c[s.fees_status] != null) c[s.fees_status]++; got += Number(s.paid); left += rest(s); });
-  $('sum').textContent = `— الكل ${ALL.length} • تم الدفع ${c.paid} • متبقي جزء ${c.partial} • لم يتم الدفع ${c.unpaid} • المحصّل ${money(got)} • المتبقي ${money(left)}`;
+  $('sum').textContent = `— الكل ${ALL.length} • تم الدفع ${c.paid} • متبقي جزء ${c.partial} • لم يتم الدفع ${c.unpaid} • تمت الطباعة ${ALL.filter((s) => s.printed_at).length} • استلموا الكارنيه ${ALL.filter(rcv).length} • المحصّل ${money(got)} • المتبقي ${money(left)}`;
   const q = toLatin($('q').value).trim(), f = $('flt').value, lv = $('fl').value, nq = norm(q);
-  const d = ALL.filter((s) => (!lv || String(s.level) === lv) && (!f || (f === 'extra' ? Number(s.extra) > 0 : s.fees_status === f)) && (!q || s.code.startsWith(q) || norm(s.name).includes(nq)));
+  const fp = $('fp').value, fc = $('fc').value;
+  const d = ALL.filter((s) => (!fp || (fp === 'y') === !!s.printed_at) && (!fc || (fc === 'y') === rcv(s)) && (!lv || String(s.level) === lv) && (!f || (f === 'extra' ? Number(s.extra) > 0 : s.fees_status === f)) && (!q || s.code.startsWith(q) || norm(s.name).includes(nq)));
   $('cnt').textContent = d.length + ' طالب';
-  $('tb').innerHTML = d.map((s) => { const st = ST[s.fees_status] || ['—', '']; return `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(grp(s.level))}</td><td>${money(s.due)}</td><td>${Number(s.extra) > 0 ? money(s.extra) + (s.extra_note ? `<div class="muted" style="font-size:.8rem">${esc(s.extra_note)}</div>` : '') : '<span class="muted">—</span>'}</td><td>${money(s.paid)}</td><td>${rest(s) > 0 ? '<b>' + money(rest(s)) + '</b>' : '<span class="muted">0</span>'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="white-space:nowrap">${s.fees_status !== 'paid' ? `<button class="btn sm" data-full="${s.id}">دفع كامل</button> ` : ''}<button class="btn sm ghost" data-ed="${s.id}">تعديل</button></td></tr>`; }).join('');
+  $('tb').innerHTML = d.map((s) => { const st = ST[s.fees_status] || ['—', '']; return `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(grp(s.level))}</td><td>${money(s.due)}</td><td>${Number(s.extra) > 0 ? money(s.extra) + (s.extra_note ? `<div class="muted" style="font-size:.8rem">${esc(s.extra_note)}</div>` : '') : '<span class="muted">—</span>'}</td><td>${money(s.paid)}</td><td>${rest(s) > 0 ? '<b>' + money(rest(s)) + '</b>' : '<span class="muted">0</span>'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td><button class="btn sm ${s.printed_at ? 'ghost' : 'danger'}" data-p="${s.id}" data-r="${s.printed_at ? 1 : 0}">${s.printed_at ? 'تمت الطباعة ✓' : 'لم تتم الطباعة'}</button></td><td>${rcv(s) ? '<span class="tag ok">استلم ✓</span>' : '<span class="tag warn">لم يستلم</span>'}</td><td style="white-space:nowrap">${s.fees_status !== 'paid' ? `<button class="btn sm" data-full="${s.id}">دفع كامل</button> ` : ''}<button class="btn sm ghost" data-ed="${s.id}">تعديل</button></td></tr>`; }).join('');
+  $('tb').querySelectorAll('button[data-p]').forEach((b) => b.onclick = async () => {
+    const s = ALL.find((x) => x.id === +b.dataset.p), was = b.dataset.r === '1'; b.disabled = true;
+    const { error } = await sb.rpc('set_card_printed', { p_student: s.id, p_printed: !was });
+    if (error) { b.disabled = false; return toast('حدث خطأ'); }
+    s.printed_at = was ? null : new Date().toISOString(); draw();
+  });
   $('tb').querySelectorAll('button[data-full]').forEach((b) => b.onclick = () => { const s = ALL.find((x) => x.id === +b.dataset.full); save(s, Number(s.due), null, null); });
   $('tb').querySelectorAll('button[data-ed]').forEach((b) => b.onclick = () => edit(ALL.find((x) => x.id === +b.dataset.ed)));
 }
 async function save(s, paid, extra, note) {
   const { data, error } = await sb.rpc('set_fee_payment', { p_student: s.id, p_paid: paid, p_extra: extra, p_note: note });
-  if (error) { toast('حصل خطأ: ' + error.message); return false; }
+  if (error) { toast('حدث خطأ: ' + error.message); return false; }
   Object.assign(s, { fees_status: data.status, paid: data.paid, extra: data.extra, extra_note: data.note, due: data.due }); draw(); return true;
 }
 function edit(s) {
@@ -181,7 +189,7 @@ function edit(s) {
     if (await save(s, p, x, $('eN').value)) m.classList.add('hidden');
   };
 }
-$('q').oninput = draw; $('flt').onchange = draw; $('fl').onchange = draw;
+$('fp').onchange = draw; $('fc').onchange = draw; $('q').oninput = draw; $('flt').onchange = draw; $('fl').onchange = draw;
 const PAID = /^(مدفوع|تم|سدد|سداد|دفع|paid|yes|نعم|1|✔|✓)/i;
 function parseFile(wb) {
   const items = [];
@@ -227,12 +235,13 @@ $('up').onchange = async (e) => {
     const list = [...hit.values()].map((x) => (x.amount != null ? { code: x.code, amount: String(x.amount) } : { code: x.code, status: x.status }));
     if ($('rest').checked) ALL.forEach((s) => { if (!hit.has(s.id)) list.push({ code: s.code, status: 'unpaid' }); });
     $('ok').disabled = true; let u = 0;
-    for (let i = 0; i < list.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: list.slice(i, i + 300) }); if (error) { toast('حصل خطأ: ' + error.message); $('ok').disabled = false; return; } u += data.updated; }
-    m.classList.add('hidden'); toast('اتحدّث ' + u + ' طالب'); load();
+    for (let i = 0; i < list.length; i += 300) { const { data, error } = await sb.rpc('set_fees', { p_items: list.slice(i, i + 300) }); if (error) { toast('حدث خطأ: ' + error.message); $('ok').disabled = false; return; } u += data.updated; }
+    m.classList.add('hidden'); toast('تم تحديث ' + u + ' طالب'); load();
   };
 };
-const ex = (pred, label, file) => exportXlsx(ALL.filter(pred).map((s, i) => [i + 1, s.code, s.name, grp(s.level), Number(s.due), Number(s.extra), s.extra_note || '', Number(s.paid), rest(s), (ST[s.fees_status] || ['—'])[0]]), ['#', 'الكود', 'الاسم', 'الفرقة', 'المطلوب', 'رسوم أخرى', 'سبب الرسوم الأخرى', 'المدفوع', 'المتبقي', 'الحالة'], label, file);
+const ex = (pred, label, file) => exportXlsx(ALL.filter(pred).map((s, i) => [i + 1, s.code, s.name, grp(s.level), Number(s.due), Number(s.extra), s.extra_note || '', Number(s.paid), rest(s), (ST[s.fees_status] || ['—'])[0], s.printed_at ? 'تمت الطباعة' : 'لم تتم الطباعة', rcv(s) ? 'استلم' : 'لم يستلم']), ['#', 'الكود', 'الاسم', 'الفرقة', 'المطلوب', 'رسوم أخرى', 'سبب الرسوم الأخرى', 'المدفوع', 'المتبقي', 'الدفع', 'الطباعة', 'الكارنيه'], label, file);
 $('xUn').onclick = () => ex((s) => s.fees_status !== 'paid', 'عليهم رسوم', 'عليهم-رسوم.xlsx');
+$('xNp').onclick = () => ex((s) => !s.printed_at, 'لم تتم الطباعة', 'لم-تتم-الطباعة.xlsx');
 $('xPd').onclick = () => ex((s) => s.fees_status === 'paid', 'دفعوا', 'دفعوا-الرسوم.xlsx');
 Auth.init({ roles: ['accounts', 'admin'], title: 'الحسابات — الرسوم', onReady: load });
 </script>

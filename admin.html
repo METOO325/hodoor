@@ -75,12 +75,12 @@ th{background:#F4F7F6;position:sticky;top:0;color:var(--muted);font-weight:600}
   <label class="f" style="flex:1 1 220px">بحث بالاسم أو الكود<input id="stq" placeholder="مثلاً: محمد"></label>
   <label class="f">الفرقة<select id="stL"><option value="">الكل</option><option value="1">الأولى</option><option value="2">الثانية</option><option value="3">الثالثة</option><option value="4">الرابعة</option></select></label>
   <label class="f">الشعبة<select id="stT"><option value="">الكل</option></select></label>
-  <label class="f">الكارنيه<select id="stM"><option value="">الكل</option><option value="y">استلم</option><option value="n">لم يستلم</option></select></label>
+  <label class="f">الدفع<select id="stF"><option value="">الكل</option><option value="paid">تم الدفع</option><option value="unpaid">لم يدفع</option><option value="partial">متبقي جزء</option></select></label><label class="f">الطباعة<select id="stP"><option value="">الكل</option><option value="y">تمت الطباعة</option><option value="n">لم تتم الطباعة</option></select></label><label class="f">الكارنيه<select id="stM"><option value="">الكل</option><option value="y">استلم</option><option value="n">لم يستلم</option></select></label>
   <button class="btn" id="stGo">عرض</button><button class="btn ghost" id="stR">مسح الفلاتر</button></div>
   <div class="row" style="margin-top:8px"><span class="muted" id="stN"></span><span style="flex:1"></span><button class="btn ghost" id="mY">تحميل الطلبة الذين استلموا الكارنيه</button><button class="btn ghost" id="mN">تحميل الطلبة الذين لم يستلموا الكارنيه</button><button class="btn" id="mA">تحميل نتيجة البحث الحالية</button></div></div>
   <div class="panel"><h3>الكارنيهات والرسوم <span class="muted" id="sum"></span></h3><div class="row"><button class="btn ghost" id="cX">تحميل جميع من لم يستلموا الكارنيه (كل الفرق)</button><button class="btn ghost" id="fX">تحميل الطلبة المتبقي عليهم رسوم (كل الفرق)</button><label class="btn" style="cursor:pointer">رفع ملف الرسوم (Excel)<input type="file" id="fUp" accept=".xlsx,.xls,.csv" hidden></label></div><div class="muted">ملف الرسوم: عمود "الكود" (أو "الرقم القومي") وعمود "الحالة": مدفوع / تم / سدد = أخضر، وأي قيمة أخرى (لم يدفع / غير مدفوع / فارغ) = برتقالي.</div></div>
   <div class="panel"><h3>فصل طالب (مؤقت)</h3><div class="row"><label class="f" style="flex:1 1 180px">كود الطالب أو كود الكارنيه (EGT-…)<input id="sc" dir="ltr"></label><label class="f">من يوم<input type="date" id="sf"></label><label class="f">إلى يوم<input type="date" id="st"></label><label class="f" style="flex:1 1 200px">ملاحظة (للإدارة فقط)<input id="sn"></label><button class="btn danger" id="suspGo">تسجيل الفصل</button><button class="btn ghost" id="suspX">إلغاء الفصل</button></div><div class="muted">طوال فترة الفصل، يظهر الطالب عند الأمن <b>أسود "مفصول"</b> ولا يُسجَّل له دخول. بعد انتهاء المدة يعود لحالته العادية تلقائياً.</div></div>
-  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الكارنيه</th><th>الرسوم</th><th>الفصل</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
+  <div class="tablewrap"><table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرقة</th><th>الشعبة</th><th>الحالة</th><th>الطباعة</th><th>الكارنيه</th><th>الرسوم</th><th>الفصل</th><th>القيد</th></tr></thead><tbody id="stB"></tbody></table></div></section>
 
 <section id="t-staff" class="hidden"><div class="panel"><h3>الموظفين والدكاترة</h3><p class="muted">اعمل الحساب من Supabase ← Authentication ← Users، وبعدين حدد صلاحيته هنا.</p>
   <div class="row"><label class="f" style="flex:1 1 240px">البريد<input id="se" type="email" dir="ltr"></label><label class="f">الصلاحية<select id="sr"><option value="doctor">دكتور</option><option value="security">أمن</option><option value="admin">إدارة</option><option value="accounts">حسابات</option><option value="none">بدون صلاحية</option></select></label><button class="btn" id="sGo2">حفظ</button></div></div>
@@ -214,7 +214,7 @@ async function loadStu(force) {
   if (!STU || force) {
     $('stN').textContent = 'جاري التحميل…';
     const [st, dv] = await Promise.all([
-      fetchAll('students', 'id,code,name,level,track,status,active,card_received_at,fees_status,susp_from,susp_to', ['name', 'id']),
+      fetchAll('students', 'id,code,name,level,track,status,active,card_received_at,printed_at,fees_status,susp_from,susp_to', ['name', 'id']),
       fetchAll('devices', 'student_id,bound_at', ['student_id'], (q) => q.not('key_hash', 'is', null))
     ]);
     const bound = new Map(dv.map((x) => [x.student_id, x.bound_at]));
@@ -226,28 +226,34 @@ async function loadStu(force) {
   drawStu();
 }
 function stuFiltered() {
-  const q = nrm($('stq').value), words = q ? q.split(' ') : [], L = $('stL').value, T = $('stT').value, M = $('stM').value;
-  return (STU || []).filter((s) => (!L || String(s.level) === L) && (!T || s.track === T) && (!M || (M === 'y') === s.rec) && words.every((w) => s.nn.includes(w) || String(s.code).startsWith(w)));
+  const q = nrm($('stq').value), words = q ? q.split(' ') : [], L = $('stL').value, T = $('stT').value, M = $('stM').value, P = $('stP').value, F = $('stF').value;
+  return (STU || []).filter((s) => (!P || (P === 'y') === !!s.printed_at) && (!F || s.fees_status === F) && (!L || String(s.level) === L) && (!T || s.track === T) && (!M || (M === 'y') === s.rec) && words.every((w) => s.nn.includes(w) || String(s.code).startsWith(w)));
 }
 function drawStu() {
   const d = stuFiltered(), all = STU || [], yes = all.filter((s) => s.rec).length;
   $('stN').textContent = `النتيجة: ${d.length} طالب • استلموا الكارنيه ${yes} من ${all.length} • لم يستلموا ${all.length - yes}`;
-  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td>${s.dev ? '<span class="tag">استلم ✓ (بالموبايل)</span>' : `<button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓ (يدوي)' : 'لم يستلم — اضغط للتأكيد'}</button>${s.card_received_at ? `<div class="muted" style="font-size:.75rem">${new Date(s.card_received_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</div>` : ''}`}</td><td>${s.fees_status === 'paid' ? '<span class="tag">مدفوع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
+  $('stB').innerHTML = d.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(LEVEL_NAME[s.level] || s.level)}</td><td>${esc(s.track)}</td><td>${esc(s.status || '')}</td><td><button class="btn ${s.printed_at ? 'ghost' : 'danger'} sm" data-p="${s.id}" data-r="${s.printed_at ? 1 : 0}">${s.printed_at ? 'تمت الطباعة ✓' : 'لم تتم الطباعة'}</button>${s.printed_at ? `<div class="muted" style="font-size:.75rem">${new Date(s.printed_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</div>` : ''}</td><td>${s.dev ? '<span class="tag">استلم ✓ (بالموبايل)</span>' : `<button class="btn ${s.card_received_at ? 'ghost' : 'danger'} sm" data-c="${s.id}" data-r="${s.card_received_at ? 1 : 0}">${s.card_received_at ? 'استلم ✓ (يدوي)' : 'لم يستلم — اضغط للتأكيد'}</button>${s.card_received_at ? `<div class="muted" style="font-size:.75rem">${new Date(s.card_received_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}</div>` : ''}`}</td><td>${s.fees_status === 'paid' ? '<span class="tag">تم الدفع</span>' : (s.fees_status === 'partial' ? '<span class="tag warn">متبقي جزء</span>' : (s.fees_status === 'unpaid' ? '<span class="tag bad">لم يدفع</span>' : '<span class="muted">—</span>'))}</td><td>${suspTag(s)}</td><td><button class="btn ${s.active ? 'ghost' : 'danger'} sm" data-id="${s.id}" data-a="${s.active ? 1 : 0}">${s.active ? 'مقيّد ✓' : 'موقوف'}</button></td></tr>`).join('');
   $('stB').querySelectorAll('button[data-c]').forEach((b) => b.onclick = async () => {
     const id = +b.dataset.c, was = b.dataset.r === '1'; b.disabled = true;
     const { error } = await sb.rpc('set_card_received', { p_student: id, p_received: !was });
     if (error) { b.disabled = false; return toast('حدث خطأ'); }
     const st = STU.find((x) => x.id === id); st.card_received_at = was ? null : new Date().toISOString(); st.rec = !!(st.dev || st.card_received_at); drawStu(); loadSum();
   });
+  $('stB').querySelectorAll('button[data-p]').forEach((b) => b.onclick = async () => {
+    const id = +b.dataset.p, was = b.dataset.r === '1'; b.disabled = true;
+    const { error } = await sb.rpc('set_card_printed', { p_student: id, p_printed: !was });
+    if (error) { b.disabled = false; return toast('حدث خطأ'); }
+    const st = STU.find((x) => x.id === id); st.printed_at = was ? null : new Date().toISOString(); drawStu();
+  });
   $('stB').querySelectorAll('button[data-id]').forEach((b) => b.onclick = async () => { await sb.from('students').update({ active: b.dataset.a !== '1' }).eq('id', +b.dataset.id); loadStu(true); });
 }
 function devXlsx(list, name) {
   const dt = (t) => new Date(t).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
-  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.rec ? 'استلم' : 'لم يستلم', r.dev ? 'بالموبايل' : (r.card_received_at ? 'يدوي' : ''), r.dev ? dt(r.dev) : (r.card_received_at ? dt(r.card_received_at) : '')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الكارنيه', 'طريقة الاستلام', 'وقت الاستلام'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
+  exportXlsx(list.map((r, i) => [i + 1, r.code, r.name, grp(r.level, r.track), r.fees_status === 'paid' ? 'تم الدفع' : (r.fees_status === 'partial' ? 'متبقي جزء' : 'لم يدفع'), r.printed_at ? 'تمت الطباعة' : 'لم تتم الطباعة', r.rec ? 'استلم' : 'لم يستلم', r.dev ? 'بالموبايل' : (r.card_received_at ? 'يدوي' : ''), r.dev ? dt(r.dev) : (r.card_received_at ? dt(r.card_received_at) : '')]), ['#', 'الكود', 'الاسم', 'الفرقة / الشعبة', 'الدفع', 'الطباعة', 'الكارنيه', 'طريقة الاستلام', 'وقت الاستلام'], 'الطلبة', name + '.xlsx'); toast('العدد: ' + list.length);
 }
-['stL', 'stT', 'stM'].forEach((i) => { $(i).onchange = () => STU && drawStu(); });
+['stL', 'stT', 'stM', 'stP', 'stF'].forEach((i) => { $(i).onchange = () => STU && drawStu(); });
 $('stq').oninput = () => STU && drawStu();
-$('stR').onclick = () => { $('stq').value = ''; $('stL').value = ''; $('stT').value = ''; $('stM').value = ''; drawStu(); };
+$('stR').onclick = () => { $('stq').value = ''; $('stL').value = ''; $('stT').value = ''; $('stM').value = ''; $('stP').value = ''; $('stF').value = ''; drawStu(); };
 $('mY').onclick = () => devXlsx(stuFiltered().filter((s) => s.rec), 'استلموا-الكارنيه');
 $('mN').onclick = () => devXlsx(stuFiltered().filter((s) => !s.rec), 'لم-يستلموا-الكارنيه');
 $('mA').onclick = () => devXlsx(stuFiltered(), 'نتيجة-البحث');
